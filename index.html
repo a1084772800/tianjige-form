@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>天机阁 · 命理信息</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #0a0a0a 100%);
+  color: #e8e0d0;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 40px 0;
+}
+.container {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #f6d365, #fda085, #f6d365);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+}
+.header .sub {
+  color: #8a7a6a;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  letter-spacing: 2px;
+}
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #d4a84480, transparent);
+  margin: 24px 0;
+}
+.form-group {
+  margin-bottom: 22px;
+}
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #d4a844;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(212,168,68,0.25);
+  border-radius: 10px;
+  color: #e8e0d0;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+.form-input:focus {
+  border-color: #d4a844;
+}
+.form-input::placeholder {
+  color: #665e50;
+}
+/* Toggle buttons */
+.toggle-group {
+  display: flex;
+  gap: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(212,168,68,0.25);
+}
+.toggle-btn {
+  flex: 1;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 1rem;
+  background: rgba(255,255,255,0.04);
+  color: #8a7a6a;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+.toggle-btn.active {
+  background: linear-gradient(135deg, #d4a844, #b8860b);
+  color: #0a0a0a;
+  font-weight: 700;
+}
+/* Select row */
+.select-row {
+  display: flex;
+  gap: 8px;
+}
+.select-row select {
+  flex: 1;
+  padding: 12px 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(212,168,68,0.25);
+  border-radius: 10px;
+  color: #e8e0d0;
+  font-size: 0.95rem;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+  cursor: pointer;
+}
+.select-row select:focus {
+  border-color: #d4a844;
+}
+select option {
+  background: #1a1a2e;
+  color: #e8e0d0;
+}
+/* Shichen select */
+.shichen-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(212,168,68,0.25);
+  border-radius: 10px;
+  color: #e8e0d0;
+  font-size: 0.95rem;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.shichen-select:focus { border-color: #d4a844; }
+/* Textarea */
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(212,168,68,0.25);
+  border-radius: 10px;
+  color: #e8e0d0;
+  font-size: 1rem;
+  outline: none;
+  resize: none;
+  height: 80px;
+  transition: border-color 0.3s;
+}
+.form-textarea:focus { border-color: #d4a844; }
+.form-textarea::placeholder { color: #665e50; }
+/* Submit */
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #d4a844, #b8860b);
+  border: none;
+  border-radius: 12px;
+  color: #0a0a0a;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 4px;
+  margin-top: 12px;
+  transition: opacity 0.3s, transform 0.15s;
+  box-shadow: 0 4px 20px rgba(212,168,68,0.25);
+}
+.submit-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Result overlay */
+.result-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.result-overlay.show { display: flex; }
+.result-card {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 1px solid rgba(212,168,68,0.3);
+  border-radius: 16px;
+  padding: 40px 28px;
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+}
+.result-card .icon { font-size: 2.5rem; margin-bottom: 16px; }
+.result-card .msg {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #e8e0d0;
+}
+.result-card .msg.error { color: #e87979; }
+/* No-uid screen */
+.no-uid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  text-align: center;
+  color: #8a7a6a;
+  font-size: 1rem;
+  padding: 20px;
+  line-height: 1.8;
+}
+</style>
+</head>
+<body>
+
+<div id="noUid" class="no-uid" style="display:none;">
+  <div>
+    <div style="font-size:2rem;margin-bottom:16px;">🔒</div>
+    <div>请从企微客服打开此页面</div>
+  </div>
+</div>
+
+<div id="formWrap" class="container" style="display:none;">
+  <div class="header">
+    <h1>天机阁 · 命理信息</h1>
+    <div class="sub">请填写您的出生信息</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 姓名 -->
+  <div class="form-group">
+    <label class="form-label">姓名</label>
+    <input type="text" id="name" class="form-input" placeholder="请输入您的姓名" autocomplete="name">
+  </div>
+
+  <!-- 性别 -->
+  <div class="form-group">
+    <label class="form-label">性别</label>
+    <div class="toggle-group" id="genderGroup">
+      <button class="toggle-btn active" data-val="男" onclick="setToggle('genderGroup','男')">男</button>
+      <button class="toggle-btn" data-val="女" onclick="setToggle('genderGroup','女')">女</button>
+    </div>
+  </div>
+
+  <!-- 日历类型 -->
+  <div class="form-group">
+    <label class="form-label">日历类型</label>
+    <div class="toggle-group" id="calendarGroup">
+      <button class="toggle-btn active" data-val="公历" onclick="setToggle('calendarGroup','公历')">公历</button>
+      <button class="toggle-btn" data-val="农历" onclick="setToggle('calendarGroup','农历')">农历</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 出生年月日 -->
+  <div class="form-group">
+    <label class="form-label">出生日期</label>
+    <div class="select-row">
+      <select id="birthYear"></select>
+      <select id="birthMonth"></select>
+      <select id="birthDay"></select>
+    </div>
+  </div>
+
+  <!-- 时辰 -->
+  <div class="form-group">
+    <label class="form-label">出生时辰</label>
+    <select id="birthHour" class="shichen-select">
+      <option value="">请选择时辰</option>
+      <option value="子时">子时 (23:00-01:00)</option>
+      <option value="丑时">丑时 (01:00-03:00)</option>
+      <option value="寅时">寅时 (03:00-05:00)</option>
+      <option value="卯时">卯时 (05:00-07:00)</option>
+      <option value="辰时">辰时 (07:00-09:00)</option>
+      <option value="巳时">巳时 (09:00-11:00)</option>
+      <option value="午时">午时 (11:00-13:00)</option>
+      <option value="未时">未时 (13:00-15:00)</option>
+      <option value="申时">申时 (15:00-17:00)</option>
+      <option value="酉时">酉时 (17:00-19:00)</option>
+      <option value="戌时">戌时 (19:00-21:00)</option>
+      <option value="亥时">亥时 (21:00-23:00)</option>
+    </select>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 咨询问题 -->
+  <div class="form-group">
+    <label class="form-label">想咨询的问题 <span style="color:#665e50;font-weight:400;">(可选)</span></label>
+    <textarea id="question" class="form-textarea" placeholder="如：财运、婚姻、事业、健康..."></textarea>
+  </div>
+
+  <!-- 提交 -->
+  <button class="submit-btn" id="submitBtn" onclick="submitForm()">提 交</button>
+</div>
+
+<!-- 结果弹层 -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="icon" id="resultIcon"></div>
+    <div class="msg" id="resultMsg"></div>
+  </div>
+</div>
+
+<script>
+(function init() {
+  var uid = new URLSearchParams(location.search).get('uid') || '';
+  if (!uid) {
+    document.getElementById('noUid').style.display = 'flex';
+    return;
+  }
+  document.getElementById('formWrap').style.display = 'block';
+
+  // Populate year
+  var yearSel = document.getElementById('birthYear');
+  var opt0 = document.createElement('option');
+  opt0.value = ''; opt0.textContent = '年'; yearSel.appendChild(opt0);
+  for (var y = 2025; y >= 1940; y--) {
+    var o = document.createElement('option');
+    o.value = y; o.textContent = y + '年';
+    yearSel.appendChild(o);
+  }
+  // Default to 1990
+  yearSel.value = '1990';
+
+  // Populate month
+  var monthSel = document.getElementById('birthMonth');
+  var om0 = document.createElement('option');
+  om0.value = ''; om0.textContent = '月'; monthSel.appendChild(om0);
+  for (var m = 1; m <= 12; m++) {
+    var o = document.createElement('option');
+    o.value = m; o.textContent = m + '月';
+    monthSel.appendChild(o);
+  }
+
+  // Populate day
+  var daySel = document.getElementById('birthDay');
+  var od0 = document.createElement('option');
+  od0.value = ''; od0.textContent = '日'; daySel.appendChild(od0);
+  for (var d = 1; d <= 31; d++) {
+    var o = document.createElement('option');
+    o.value = d; o.textContent = d + '日';
+    daySel.appendChild(o);
+  }
+})();
+
+var toggleState = { genderGroup: '男', calendarGroup: '公历' };
+
+function setToggle(groupId, val) {
+  toggleState[groupId] = val;
+  var btns = document.getElementById(groupId).querySelectorAll('.toggle-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-val') === val);
+  });
+}
+
+function submitForm() {
+  var uid = new URLSearchParams(location.search).get('uid') || '';
+  var name = document.getElementById('name').value.trim();
+  var gender = toggleState.genderGroup;
+  var calendar_type = toggleState.calendarGroup;
+  var birth_year = document.getElementById('birthYear').value;
+  var birth_month = document.getElementById('birthMonth').value;
+  var birth_day = document.getElementById('birthDay').value;
+  var birth_hour = document.getElementById('birthHour').value;
+  var question = document.getElementById('question').value.trim();
+
+  // Validate
+  if (!name) { alert('请输入姓名'); return; }
+  if (!birth_year || !birth_month || !birth_day) { alert('请选择完整的出生日期'); return; }
+  if (!birth_hour) { alert('请选择出生时辰'); return; }
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+
+  fetch('https://v609a76lof.sealoshzh.site/save_profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      uid: uid,
+      name: name,
+      gender: gender,
+      birth_year: birth_year,
+      birth_month: birth_month,
+      birth_day: birth_day,
+      birth_hour: birth_hour,
+      calendar_type: calendar_type,
+      question: question,
+      submitted_at: new Date().toISOString()
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.success) {
+      showResult('✨', '信息已提交\n天机正在为您排盘\n请返回企微查看结果', false);
+    } else {
+      showResult('⚠️', '提交失败，请重试', true);
+      btn.disabled = false;
+      btn.textContent = '提 交';
+    }
+  })
+  .catch(function() {
+    showResult('⚠️', '提交失败，请重试', true);
+    btn.disabled = false;
+    btn.textContent = '提 交';
+  });
+}
+
+function showResult(icon, msg, isError) {
+  document.getElementById('resultIcon').textContent = icon;
+  var msgEl = document.getElementById('resultMsg');
+  msgEl.textContent = msg;
+  msgEl.style.whiteSpace = 'pre-line';
+  msgEl.className = 'msg' + (isError ? ' error' : '');
+  document.getElementById('resultOverlay').classList.add('show');
+
+  if (isError) {
+    setTimeout(function() {
+      document.getElementById('resultOverlay').classList.remove('show');
+    }, 2000);
+  }
+}
+</script>
+</body>
+</html>
