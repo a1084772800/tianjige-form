@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>天机阁 · 命理报告</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #0a0a0a 100%);
+  color: #e8e0d0;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 60px 0;
+}
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding-top: 20px;
+}
+.header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #f6d365, #fda085, #f6d365);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.header .subtitle {
+  color: #a09080;
+  font-size: 0.85rem;
+}
+.report-content {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(246,211,101,0.15);
+  border-radius: 16px;
+  padding: 28px 24px;
+  line-height: 1.9;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.report-content h2, .report-content h3 {
+  color: #f6d365;
+  margin: 20px 0 10px 0;
+  font-size: 1.1rem;
+}
+.report-content strong {
+  color: #fda085;
+}
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  color: #706050;
+  font-size: 0.8rem;
+  border-top: 1px solid rgba(246,211,101,0.1);
+}
+.footer .brand {
+  color: #f6d365;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #a09080;
+}
+.loading .spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(246,211,101,0.2);
+  border-top-color: #f6d365;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #e07060;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 id="title">天机阁 · 命理报告</h1>
+    <div class="subtitle" id="subtitle"></div>
+  </div>
+  <div id="content">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>正在加载报告...</div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="brand">天机阁 · 玄学智慧</div>
+    十余种术数精算，命理师级深度解读<br>
+    想了解自己的命盘？添加天机阁即可体验
+  </div>
+</div>
+<script>
+const API_BASE = 'https://v609a76lof.sealoshzh.site';
+const params = new URLSearchParams(location.search);
+const reportId = params.get('id');
+
+if (!reportId) {
+  document.getElementById('content').innerHTML = '<div class="error">无效的报告链接</div>';
+} else {
+  fetch(`${API_BASE}/get_report?id=${reportId}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        document.getElementById('content').innerHTML = `<div class="error">${data.error === 'report not found' ? '报告不存在或已过期' : '加载失败'}</div>`;
+        return;
+      }
+      const report = data.report;
+      document.getElementById('title').textContent = report.title || '命理报告';
+      if (report.created_at) {
+        const d = new Date(report.created_at * 1000);
+        document.getElementById('subtitle').textContent = d.toLocaleDateString('zh-CN', {year:'numeric',month:'long',day:'numeric'});
+      }
+      // 简单 markdown 渲染
+      let html = report.content
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      document.getElementById('content').innerHTML = `<div class="report-content">${html}</div>`;
+      document.title = `${report.title} - 天机阁`;
+    })
+    .catch(() => {
+      document.getElementById('content').innerHTML = '<div class="error">网络错误，请稍后重试</div>';
+    });
+}
+</script>
+</body>
+</html>
