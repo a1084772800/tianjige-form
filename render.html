@@ -59,11 +59,17 @@ body {
   font-size: 0.95rem;
 }
 .error .retry-btn:active { opacity: 0.7; }
-#render-frame {
-  width: 100%;
-  height: 100vh;
-  border: none;
+#render-content {
   display: none;
+}
+/* 确保注入的HTML中链接可点击 */
+#render-content a {
+  color: #f6d365;
+  text-decoration: underline;
+  word-break: break-all;
+}
+#render-content a:active {
+  opacity: 0.7;
 }
 </style>
 </head>
@@ -81,7 +87,7 @@ body {
   <button class="retry-btn" onclick="loadPage()">重新加载</button>
 </div>
 
-<iframe id="render-frame" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+<div id="render-content"></div>
 
 <script>
 const API = 'https://v609a76lof.sealoshzh.site';
@@ -146,33 +152,33 @@ async function loadPage(attempt) {
       document.title = '天机阁 · ' + data.title;
     }
 
-    // 确保 HTML 有中文语言标记
     var html = data.html || '';
-    if (html.indexOf('<html') !== -1 && html.indexOf('lang=') === -1) {
-      html = html.replace('<html', '<html lang="zh-CN"');
-    }
-    if (html.indexOf('charset') === -1 && html.indexOf('<head>') !== -1) {
-      html = html.replace('<head>', '<head><meta charset="UTF-8">');
+
+    // 从完整HTML中提取body内容和style
+    var container = document.getElementById('render-content');
+    var bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    var styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+
+    // 注入样式到head
+    if (styleMatch) {
+      styleMatch.forEach(function(s) {
+        var styleEl = document.createElement('style');
+        styleEl.textContent = s.replace(/<\/?style[^>]*>/gi, '');
+        document.head.appendChild(styleEl);
+      });
     }
 
-    var frame = document.getElementById('render-frame');
-    frame.srcdoc = html;
-    frame.style.display = 'block';
+    // 注入body内容（直接渲染，非iframe）
+    container.innerHTML = bodyMatch ? bodyMatch[1] : html;
+    container.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'none';
 
-    // 自适应高度 + 内容变化监听
-    frame.onload = function() {
-      try {
-        var h = frame.contentDocument.documentElement.scrollHeight;
-        if (h > 100) frame.style.height = h + 'px';
-        var observer = new MutationObserver(function() {
-          var newH = frame.contentDocument.documentElement.scrollHeight;
-          if (newH > 100) frame.style.height = newH + 'px';
-        });
-        observer.observe(frame.contentDocument.body, { childList: true, subtree: true, attributes: true });
-      } catch(e) {}
-    };
+    // 所有链接设为新窗口打开（微信内置浏览器兼容）
+    container.querySelectorAll('a[href]').forEach(function(a) {
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener');
+    });
 
   } catch (e) {
     if (attempt < MAX_RETRIES) {
