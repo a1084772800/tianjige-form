@@ -59,17 +59,11 @@ body {
   font-size: 0.95rem;
 }
 .error .retry-btn:active { opacity: 0.7; }
-#render-content {
+#render-frame {
+  width: 100%;
+  height: 100vh;
+  border: none;
   display: none;
-}
-/* 确保注入的HTML中链接可点击 */
-#render-content a {
-  color: #f6d365;
-  text-decoration: underline;
-  word-break: break-all;
-}
-#render-content a:active {
-  opacity: 0.7;
 }
 </style>
 </head>
@@ -87,7 +81,7 @@ body {
   <button class="retry-btn" onclick="loadPage()">重新加载</button>
 </div>
 
-<div id="render-content"></div>
+<iframe id="render-frame" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation allow-top-navigation-by-user-activation"></iframe>
 
 <script>
 const API = 'https://v609a76lof.sealoshzh.site';
@@ -152,19 +146,41 @@ async function loadPage(attempt) {
       document.title = '天机阁 · ' + data.title;
     }
 
+    // 确保 HTML 有中文语言标记
     var html = data.html || '';
-
-    // 直接替换整个页面内容（避免CSS冲突和iframe限制）
-    // 注入一段脚本让所有链接在新窗口打开
-    var linkFix = '<script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("a[href]").forEach(function(a){a.setAttribute("target","_blank");a.setAttribute("rel","noopener")})});<\/script>';
-    if (html.indexOf('</head>') !== -1) {
-      html = html.replace('</head>', linkFix + '</head>');
-    } else {
-      html = linkFix + html;
+    if (html.indexOf('<html') !== -1 && html.indexOf('lang=') === -1) {
+      html = html.replace('<html', '<html lang="zh-CN"');
     }
-    document.open();
-    document.write(html);
-    document.close();
+    if (html.indexOf('charset') === -1 && html.indexOf('<head>') !== -1) {
+      html = html.replace('<head>', '<head><meta charset="UTF-8">');
+    }
+
+    // 注入链接修复脚本：所有<a>标签点击时用top.location跳转（绕过iframe限制）
+    var linkScript = '<script>document.addEventListener("click",function(e){var a=e.target.closest("a[href]");if(a){e.preventDefault();window.top.location.href=a.href}});<\/script>';
+    if (html.indexOf('</body>') !== -1) {
+      html = html.replace('</body>', linkScript + '</body>');
+    } else {
+      html = html + linkScript;
+    }
+
+    var frame = document.getElementById('render-frame');
+    frame.srcdoc = html;
+    frame.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+
+    // 自适应高度 + 内容变化监听
+    frame.onload = function() {
+      try {
+        var h = frame.contentDocument.documentElement.scrollHeight;
+        if (h > 100) frame.style.height = h + 'px';
+        var observer = new MutationObserver(function() {
+          var newH = frame.contentDocument.documentElement.scrollHeight;
+          if (newH > 100) frame.style.height = newH + 'px';
+        });
+        observer.observe(frame.contentDocument.body, { childList: true, subtree: true, attributes: true });
+      } catch(e) {}
+    };
 
   } catch (e) {
     if (attempt < MAX_RETRIES) {
