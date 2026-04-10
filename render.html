@@ -154,31 +154,17 @@ async function loadPage(attempt) {
 
     var html = data.html || '';
 
-    // 从完整HTML中提取body内容和style
-    var container = document.getElementById('render-content');
-    var bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-    var styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
-
-    // 注入样式到head
-    if (styleMatch) {
-      styleMatch.forEach(function(s) {
-        var styleEl = document.createElement('style');
-        styleEl.textContent = s.replace(/<\/?style[^>]*>/gi, '');
-        document.head.appendChild(styleEl);
-      });
+    // 直接替换整个页面内容（避免CSS冲突和iframe限制）
+    // 注入一段脚本让所有链接在新窗口打开
+    var linkFix = '<script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("a[href]").forEach(function(a){a.setAttribute("target","_blank");a.setAttribute("rel","noopener")})});<\/script>';
+    if (html.indexOf('</head>') !== -1) {
+      html = html.replace('</head>', linkFix + '</head>');
+    } else {
+      html = linkFix + html;
     }
-
-    // 注入body内容（直接渲染，非iframe）
-    container.innerHTML = bodyMatch ? bodyMatch[1] : html;
-    container.style.display = 'block';
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'none';
-
-    // 所有链接设为新窗口打开（微信内置浏览器兼容）
-    container.querySelectorAll('a[href]').forEach(function(a) {
-      a.setAttribute('target', '_blank');
-      a.setAttribute('rel', 'noopener');
-    });
+    document.open();
+    document.write(html);
+    document.close();
 
   } catch (e) {
     if (attempt < MAX_RETRIES) {
