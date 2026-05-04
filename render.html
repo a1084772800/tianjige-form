@@ -81,7 +81,7 @@ body {
   <button class="retry-btn" onclick="loadPage()">重新加载</button>
 </div>
 
-<iframe id="render-frame" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation allow-top-navigation-by-user-activation"></iframe>
+<iframe id="render-frame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
 
 <script>
 const API = 'https://v609a76lof.sealoshzh.site';
@@ -91,6 +91,21 @@ const FETCH_TIMEOUT = 15000;
 
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
+
+// 桥接：iframe 因 sandbox 无 same-origin / top-navigation，走 postMessage
+window.addEventListener('message', function(e) {
+  var frame = document.getElementById('render-frame');
+  if (!frame || e.source !== frame.contentWindow) return;
+  var d = e.data || {};
+  if (d.type === 'resize' && typeof d.height === 'number' && d.height > 100 && d.height < 100000) {
+    frame.style.height = d.height + 'px';
+  } else if (d.type === 'navigate' && typeof d.url === 'string') {
+    // 简单 URL 校验：必须是绝对 http(s) 链接，禁 javascript: / data: 等
+    if (/^https?:\/\//i.test(d.url)) {
+      window.top.location.href = d.url;
+    }
+  }
+});
 
 function showLoading(msg) {
   document.getElementById('loading').style.display = 'flex';
@@ -155,12 +170,15 @@ async function loadPage(attempt) {
       html = html.replace('<head>', '<head><meta charset="UTF-8">');
     }
 
-    // 注入链接修复脚本：所有<a>标签点击时用top.location跳转（绕过iframe限制）
-    var linkScript = '<script>document.addEventListener("click",function(e){var a=e.target.closest("a[href]");if(a){e.preventDefault();window.top.location.href=a.href}});<\/script>';
+    // 注入桥接脚本：sandboxed iframe 不能访问 top.location，也不能被 outer 读 contentDocument。
+    // 全部走 postMessage:
+    //   - {type:'navigate', url}: outer 校验同站后用 top.location 跳转
+    //   - {type:'resize', height}: outer 调 iframe.style.height 自适应
+    var bridgeScript = "<script>(function(){function send(m){try{parent.postMessage(m,'*')}catch(e){}}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(a){var u=a.href;if(u){e.preventDefault();send({type:'navigate',url:u})}}},true);function reportH(){var h=Math.max(document.documentElement.scrollHeight||0,document.body?document.body.scrollHeight:0);if(h>100)send({type:'resize',height:h})}window.addEventListener('load',reportH);if(window.MutationObserver){var ob=new MutationObserver(reportH);document.addEventListener('DOMContentLoaded',function(){ob.observe(document.documentElement,{childList:true,subtree:true,attributes:true})})}setInterval(reportH,1500)})();<\/script>";
     if (html.indexOf('</body>') !== -1) {
-      html = html.replace('</body>', linkScript + '</body>');
+      html = html.replace('</body>', bridgeScript + '</body>');
     } else {
-      html = html + linkScript;
+      html = html + bridgeScript;
     }
 
     var frame = document.getElementById('render-frame');
@@ -168,19 +186,6 @@ async function loadPage(attempt) {
     frame.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'none';
-
-    // 自适应高度 + 内容变化监听
-    frame.onload = function() {
-      try {
-        var h = frame.contentDocument.documentElement.scrollHeight;
-        if (h > 100) frame.style.height = h + 'px';
-        var observer = new MutationObserver(function() {
-          var newH = frame.contentDocument.documentElement.scrollHeight;
-          if (newH > 100) frame.style.height = newH + 'px';
-        });
-        observer.observe(frame.contentDocument.body, { childList: true, subtree: true, attributes: true });
-      } catch(e) {}
-    };
 
   } catch (e) {
     if (attempt < MAX_RETRIES) {
