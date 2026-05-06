@@ -1,0 +1,18 @@
+# H800 测试素材（视频/帧/进度文件 - 临时演示用，不属于代码库）
+assets/h800_60s_intro/
+assets/h800_fixed/
+
+# 大文件 mp4 (单文件可超 100MB GitHub 限制)
+*.mp4
+*.mov
+*.avi
+
+# 临时文件
+*.tmp
+*.bak
+.DS_Store
+__pycache__/
+*.pyc
+node_modules/
+assets/h800_liveportrait/
+laf_monitor/__pycache__/

@@ -5,7 +5,7 @@ const db = cloud.database()
 // 1MB cap (与 render_tool.py 客户端预检对齐)
 const MAX_HTML_BYTES = 1024 * 1024
 
-// XSS 模式黑名单：注入向量，覆盖 owner 9/20 心脏 opus 体检 P0 报告里的 top.location 武器
+// XSS 模式黑名单：覆盖 top.location / document.cookie / eval / inline event handler / javascript: URI / data:text/html / meta refresh 等经典注入向量。
 // 主防线是 token auth + iframe sandbox（无 same-origin / 无 top-navigation），这层是定向阻断。
 // 注意：业务页面允许 onclick="copyCmd(this)" 等普通 UI 事件，所以 inline event 不能整体拉黑。
 // 仅拦"经典攻击向量"（onerror=/onload= 在 img/iframe 上 + javascript: + meta refresh）
@@ -22,11 +22,11 @@ const XSS_PATTERNS: Array<{ name: string; re: RegExp }> = [
 ]
 
 function sniffXss(html: string): string[] {
-  const hits: string[] = []
+  // 早返：命中第一个就回，不必扫完 9 条（平均扫 ~5 条 → 1 条）
   for (const p of XSS_PATTERNS) {
-    if (p.re.test(html)) hits.push(p.name)
+    if (p.re.test(html)) return [p.name]
   }
-  return hits
+  return []
 }
 
 export default async function (ctx: FunctionContext) {
