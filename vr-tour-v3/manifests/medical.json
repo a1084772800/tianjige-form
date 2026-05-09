@@ -1,0 +1,50 @@
+{
+  "industry": "medical",
+  "name": "医院实训 · VR 教学",
+  "brand_short": "医",
+  "brand_sub": "Hospital Training · VR Surgery Sim",
+  "brand_color": "#e84c5b",
+  "brand_color_2": "#ff7a87",
+  "scenes": [
+    {
+      "id": "or_room",
+      "label": "手术室",
+      "splat_url": "https://storage.googleapis.com/forge-dev-public/marble-scenes/greyscale-room.spz",
+      "size_mb": 30,
+      "start": [0, 1.6, 2.0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {"id":"sterile_zone","type":"text","label":"无菌区","position":[0,0.8,0],
+         "body":"层流手术室 ISO 5 级（百级洁净度）。气流速度 0.25-0.30 m/s 单向流。手术床中心 1.5m × 1.5m 为 100 级核心区。"},
+        {"id":"anesthesia","type":"text","label":"麻醉机","position":[-1.5,1.2,-0.5],
+         "body":"Datex-Ohmeda Aestiva/5。监护：ECG / SpO2 / NIBP / etCO2 / 体温。气管插管前必查面罩通气。"},
+        {"id":"to_icu","type":"nav","label":"去 ICU","position":[1.5,0.8,1.0],
+         "target_scene":"icu"}
+      ]
+    },
+    {
+      "id": "icu",
+      "label": "ICU 病房",
+      "splat_url": "https://storage.googleapis.com/forge-dev-public/painted_bedroom.spz",
+      "size_mb": 8,
+      "start": [0, 1.6, 1.5],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {"id":"icu_bed","type":"text","label":"床旁监护","position":[0,0.6,0],
+         "body":"飞利浦 IntelliVue MX800。8 通道：ECG II 导联 / ABP / CVP / SpO2 / etCO2 / 体温 × 2 / RR。报警阈值需个性化。"},
+        {"id":"to_or","type":"nav","label":"回手术室","position":[-1.0,0.8,1.0],
+         "target_scene":"or_room"}
+      ]
+    }
+  ],
+  "cta": {
+    "title": "医学院培训授权 · 含考核题库",
+    "price": "¥4,800 / 学期",
+    "desc": "30 个 VR 场景 + 200 道情景题 + 教师管理后台",
+    "button": "申请试用",
+    "alert": "教学合作邮箱：edu@medsim.cn · 提供医学院/进修医生培训授权"
+  },
+  "features": ["hotspot_nav", "measure", "dollhouse", "annotation"]
+}

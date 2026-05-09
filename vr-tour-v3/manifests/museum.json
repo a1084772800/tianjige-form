@@ -1,0 +1,51 @@
+{
+  "industry": "museum",
+  "name": "云端博物馆 · VR 展厅",
+  "brand_short": "馆",
+  "brand_sub": "Virtual Museum · Educational Tour",
+  "brand_color": "#9b6dff",
+  "brand_color_2": "#c79fff",
+  "scenes": [
+    {
+      "id": "hall_a",
+      "label": "瓷器厅",
+      "splat_url": "https://storage.googleapis.com/forge-dev-public/painted_bedroom.spz",
+      "size_mb": 8,
+      "start": [0, 1.6, 1.5],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {"id":"vase_blue","type":"text","label":"青花瓷瓶","position":[0,0.7,-0.5],
+         "body":"明永乐 青花缠枝莲纹梅瓶。高 35.4 cm，腹径 22.2 cm。1402 年御窑制作，钴料采自波斯，釉下青花典范。"},
+        {"id":"video_intro","type":"video","label":"展厅导览","position":[1.0,1.0,0],
+         "src":"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+         "body":"瓷器厅 5 分钟导览，由策展人讲解三件镇馆之宝。"},
+        {"id":"to_bronze","type":"nav","label":"去青铜厅","position":[-1.2,0.8,1.0],
+         "target_scene":"hall_b"}
+      ]
+    },
+    {
+      "id": "hall_b",
+      "label": "青铜厅",
+      "splat_url": "https://storage.googleapis.com/forge-dev-public/marble-scenes/greyscale-room.spz",
+      "size_mb": 30,
+      "start": [0, 1.6, 2.0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {"id":"ding_info","type":"text","label":"司母戊鼎","position":[0,0.8,0],
+         "body":"商代后期。重 832.84 公斤，高 133 cm，是已知中国出土最大最重的青铜礼器。1939 年于河南安阳出土。"},
+        {"id":"to_porcelain","type":"nav","label":"回瓷器厅","position":[1.5,1.0,-1.0],
+         "target_scene":"hall_a"}
+      ]
+    }
+  ],
+  "cta": {
+    "title": "学校包场 · VR 教学合作",
+    "price": "免费基础访问",
+    "desc": "学校/机构可申请深度导览版（含 4K 文物模型 + 互动测验）",
+    "button": "教育合作",
+    "alert": "教育合作邮箱：edu@vmuseum.org · 学校批量授权可申请试用"
+  },
+  "features": ["hotspot_nav", "measure", "dollhouse", "annotation"]
+}
