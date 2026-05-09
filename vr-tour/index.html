@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>灵犀 AI · VR 看房</title>
+<meta name="description" content="3D 高斯泼溅 + WebXR 沉浸式空间演示。微信打开拖动观看，戴上头显走进去看。">
+<meta property="og:title" content="灵犀 AI · VR 看房">
+<meta property="og:description" content="3D 高斯泼溅沉浸式空间，手机拖动 / 头显步入。">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#0a0e14;color:#f0f1f2;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
+pc-app{display:block;width:100%;height:100%}
+#chrome{position:fixed;inset:0;pointer-events:none;z-index:10}
+#header{position:absolute;top:0;left:0;right:0;padding:18px 20px;background:linear-gradient(180deg,rgba(10,14,20,.92),rgba(10,14,20,0));pointer-events:auto}
+#brand{display:flex;align-items:center;gap:10px;color:#fff}
+#logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#ff8a3d,#ffb84d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#0a0e14}
+#brand-text{font-size:16px;font-weight:600;letter-spacing:.5px}
+#brand-sub{font-size:11px;opacity:.6;margin-top:2px;font-weight:400}
+#hint{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);padding:10px 18px;background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:24px;font-size:13px;color:#cfd2d6;white-space:nowrap;pointer-events:none;animation:fadeIn .8s .4s both}
+#cta{position:absolute;bottom:24px;left:16px;right:16px;padding:18px 20px;background:rgba(20,25,32,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,138,61,.35);border-radius:18px;pointer-events:auto;animation:fadeIn .8s .8s both}
+#cta-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+#cta-text{flex:1;min-width:0}
+#cta-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:3px}
+#cta-desc{font-size:12px;color:#a8acb3;line-height:1.5}
+#cta-price{color:#ff8a3d;font-weight:600}
+#cta-btn{flex-shrink:0;padding:10px 18px;background:linear-gradient(135deg,#ff8a3d,#ffb84d);border:none;border-radius:10px;color:#0a0e14;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+#cta-btn:active{transform:scale(.96)}
+#vr-btn{position:absolute;top:16px;right:16px;padding:8px 14px;background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);border-radius:20px;color:#fff;font-size:12px;cursor:pointer;pointer-events:auto;display:none}
+#vr-btn.show{display:block}
+#loader{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0e14;z-index:20;transition:opacity .6s}
+#loader.gone{opacity:0;pointer-events:none}
+#spinner{width:48px;height:48px;border:3px solid rgba(255,138,61,.2);border-top-color:#ff8a3d;border-radius:50%;animation:spin 1s linear infinite}
+#loader-text{margin-top:18px;font-size:13px;color:#8a8e94;letter-spacing:1px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media (min-width:768px){#cta{left:50%;transform:translateX(-50%);max-width:520px}#hint{bottom:120px}}
+</style>
+<script type="importmap">
+{"imports":{"playcanvas":"https://cdn.jsdelivr.net/npm/playcanvas/build/playcanvas.mjs"}}
+</script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@playcanvas/web-components/dist/pwc.mjs"></script>
+</head>
+<body>
+<pc-app antialias="false" depth="false" high-resolution="false" stencil="false">
+  <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas/scripts/esm/camera-controls.mjs"></pc-asset>
+  <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas/scripts/esm/xr-controllers.mjs"></pc-asset>
+  <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas/scripts/esm/xr-navigation.mjs"></pc-asset>
+  <pc-asset src="https://cdn.jsdelivr.net/npm/playcanvas/scripts/esm/xr-session.mjs"></pc-asset>
+  <pc-asset id="splat-angel" src="https://raw.githubusercontent.com/playcanvas/web-components/main/examples/assets/splats/statues/angel.sog"></pc-asset>
+  <pc-asset id="splat-candle" src="https://raw.githubusercontent.com/playcanvas/web-components/main/examples/assets/splats/statues/angel-with-candlestick.sog"></pc-asset>
+  <pc-asset id="splat-massa" src="https://raw.githubusercontent.com/playcanvas/web-components/main/examples/assets/splats/statues/massa.sog"></pc-asset>
+  <pc-asset id="sky-room" src="https://raw.githubusercontent.com/playcanvas/web-components/main/examples/assets/skies/sepulchral-chapel-rotunda-4k.webp"></pc-asset>
+  <pc-scene>
+    <pc-sky asset="sky-room" type="dome" center="0 0.1 0" scale="20 20 20" lighting></pc-sky>
+    <pc-entity name="camera-root">
+      <pc-entity name="camera" position="0 1.6 4">
+        <pc-camera fov="65" clear-color="0.04 0.055 0.08 1"></pc-camera>
+        <pc-scripts>
+          <pc-script name="cameraControls" attributes='{
+            "enableFly": false,
+            "enablePan": false,
+            "focusPoint": "vec3:0,1.5,0",
+            "pitchRange": "vec2:-60,30",
+            "sceneSize": 5,
+            "zoomRange": "vec2:1.5,7",
+            "rotateSpeed": 0.25
+          }'></pc-script>
+        </pc-scripts>
+      </pc-entity>
+      <pc-scripts>
+        <pc-script name="xrControllers"></pc-script>
+        <pc-script name="xrNavigation"></pc-script>
+        <pc-script name="xrSession"></pc-script>
+      </pc-scripts>
+    </pc-entity>
+    <pc-entity name="centerpiece" position="0 1 0" rotation="0 -30 180">
+      <pc-splat asset="splat-angel"></pc-splat>
+    </pc-entity>
+    <pc-entity name="left-statue" position="-2.4 0.9 -0.6" rotation="0 45 180" scale="0.85 0.85 0.85">
+      <pc-splat asset="splat-candle"></pc-splat>
+    </pc-entity>
+    <pc-entity name="right-statue" position="2.4 0.9 -0.6" rotation="0 -45 180" scale="0.85 0.85 0.85">
+      <pc-splat asset="splat-massa"></pc-splat>
+    </pc-entity>
+  </pc-scene>
+</pc-app>
+
+<div id="chrome">
+  <div id="header">
+    <div id="brand">
+      <div id="logo">灵</div>
+      <div>
+        <div id="brand-text">灵犀 AI · VR 看房</div>
+        <div id="brand-sub">3D Gaussian Splatting · WebXR Demo</div>
+      </div>
+    </div>
+  </div>
+  <button id="vr-btn">进入 VR</button>
+  <div id="hint">单指拖动旋转 · 双指捏合缩放</div>
+  <div id="cta">
+    <div id="cta-row">
+      <div id="cta-text">
+        <div id="cta-title">扫你的房 → 私信加 V</div>
+        <div id="cta-desc"><span id="cta-price">¥199 / 月</span> · 上传你的空间，AI 自动生成 VR 看房链接</div>
+      </div>
+      <button id="cta-btn">了解详情</button>
+    </div>
+  </div>
+</div>
+
+<div id="loader">
+  <div id="spinner"></div>
+  <div id="loader-text">正在加载沉浸式空间…</div>
+</div>
+
+<script type="module">
+const loader = document.getElementById('loader');
+const vrBtn = document.getElementById('vr-btn');
+const ctaBtn = document.getElementById('cta-btn');
+
+// Hide loader once PlayCanvas app is ready
+const app = document.querySelector('pc-app');
+const hide = () => setTimeout(() => loader.classList.add('gone'), 600);
+if (app) {
+  app.addEventListener('ready', hide);
+  setTimeout(hide, 4500); // hard fallback
+} else {
+  hide();
+}
+
+// WebXR availability check
+if (navigator.xr) {
+  navigator.xr.isSessionSupported('immersive-vr').then(ok => {
+    if (ok) vrBtn.classList.add('show');
+  }).catch(() => {});
+}
+vrBtn.addEventListener('click', () => {
+  const pcApp = document.querySelector('pc-app');
+  if (pcApp && pcApp.app) {
+    pcApp.app.fire('xr:start');
+  }
+});
+
+ctaBtn.addEventListener('click', () => {
+  alert('请添加微信：lingxi-ai · 上传你的空间扫描，24h 内拿到 VR 链接');
+});
+
+// Prevent rubber-band scroll on iOS Safari
+document.addEventListener('touchmove', e => e.preventDefault(), {passive: false});
+</script>
+</body>
+</html>
