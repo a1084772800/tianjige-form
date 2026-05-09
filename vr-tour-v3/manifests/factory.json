@@ -11,16 +11,51 @@
       "label": "样品展厅",
       "splat_url": "https://storage.googleapis.com/forge-dev-public/marble-scenes/greyscale-room.spz",
       "size_mb": 30,
-      "start": [0, 1.6, 2.0],
-      "offset": [0, 0, 0],
+      "start": [
+        0,
+        0.5,
+        3.0
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"product_a","type":"text","label":"主打产品","position":[0,0.6,0],
-         "body":"港泰主营：精密五金/塑胶模具/CNC 加工。月产能 120 万件，良率 99.6%。客户：博世/海尔/格力。"},
-        {"id":"to_workshop","type":"nav","label":"去车间","position":[-1.5,0.8,-0.5],
-         "target_scene":"workshop"},
-        {"id":"certs","type":"text","label":"认证","position":[1.4,1.6,-1.0],
-         "body":"ISO 9001 / 14001 / IATF 16949 / RoHS 全套认证。可提供海关 AEO 高级认证企业资质。"}
+        {
+          "id": "product_a",
+          "type": "text",
+          "label": "主打产品",
+          "position": [
+            0,
+            0.6,
+            0
+          ],
+          "body": "港泰主营：精密五金/塑胶模具/CNC 加工。月产能 120 万件，良率 99.6%。客户：博世/海尔/格力。"
+        },
+        {
+          "id": "to_workshop",
+          "type": "nav",
+          "label": "去车间",
+          "position": [
+            -1.5,
+            0.8,
+            -0.5
+          ],
+          "target_scene": "workshop"
+        },
+        {
+          "id": "certs",
+          "type": "text",
+          "label": "认证",
+          "position": [
+            1.4,
+            1.6,
+            -1.0
+          ],
+          "body": "ISO 9001 / 14001 / IATF 16949 / RoHS 全套认证。可提供海关 AEO 高级认证企业资质。"
+        }
       ]
     },
     {
@@ -28,14 +63,40 @@
       "label": "生产车间",
       "splat_url": "https://storage.googleapis.com/forge-dev-public/asundqui/cozy-xr/cozy_cottage-lod.spz",
       "size_mb": 93,
-      "start": [0, 1.6, 0],
-      "offset": [0, -1, 0],
+      "start": [
+        0,
+        1.5,
+        1.5
+      ],
+      "offset": [
+        0,
+        -1,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"line_info","type":"text","label":"自动化产线","position":[1.0,0.6,0.5],
-         "body":"3 条自动注塑产线 + 12 台 CNC 加工中心 + 8 台 EDM 火花机。一次合格率 99.2%。"},
-        {"id":"to_showroom","type":"nav","label":"回展厅","position":[-1.0,0.8,-0.5],
-         "target_scene":"showroom"}
+        {
+          "id": "line_info",
+          "type": "text",
+          "label": "自动化产线",
+          "position": [
+            1.0,
+            0.6,
+            0.5
+          ],
+          "body": "3 条自动注塑产线 + 12 台 CNC 加工中心 + 8 台 EDM 火花机。一次合格率 99.2%。"
+        },
+        {
+          "id": "to_showroom",
+          "type": "nav",
+          "label": "回展厅",
+          "position": [
+            -1.0,
+            0.8,
+            -0.5
+          ],
+          "target_scene": "showroom"
+        }
       ]
     }
   ],
@@ -46,5 +107,10 @@
     "button": "询价咨询",
     "alert": "请联系港泰销售：海通 +86 138-xxxx-xxxx · 24h 内回复 RFQ"
   },
-  "features": ["hotspot_nav", "measure", "dollhouse", "annotation"]
+  "features": [
+    "hotspot_nav",
+    "measure",
+    "dollhouse",
+    "annotation"
+  ]
 }

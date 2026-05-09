@@ -11,16 +11,51 @@
       "label": "主店面",
       "splat_url": "https://storage.googleapis.com/forge-dev-public/marble-scenes/greyscale-room.spz",
       "size_mb": 30,
-      "start": [0, 1.6, 2.0],
-      "offset": [0, 0, 0],
+      "start": [
+        0,
+        0.5,
+        3.0
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"area_info","type":"text","label":"主营业面","position":[0.5,0.6,0],
-         "body":"使用面积 86 ㎡，临街展示面 6.2 米。层高 3.4 米，可吊顶 LED 灯轨。地坪：抛光大理石。"},
-        {"id":"to_storeroom","type":"nav","label":"去后厨/库","position":[-1.5,0.8,0],
-         "target_scene":"storeroom"},
-        {"id":"electric","type":"text","label":"电力配置","position":[1.5,1.6,-1.0],
-         "body":"独立电表 60A 三相，可申请扩容至 100A。空调点位 4 个，预留新风管。"}
+        {
+          "id": "area_info",
+          "type": "text",
+          "label": "主营业面",
+          "position": [
+            0.5,
+            0.6,
+            0
+          ],
+          "body": "使用面积 86 ㎡，临街展示面 6.2 米。层高 3.4 米，可吊顶 LED 灯轨。地坪：抛光大理石。"
+        },
+        {
+          "id": "to_storeroom",
+          "type": "nav",
+          "label": "去后厨/库",
+          "position": [
+            -1.5,
+            0.8,
+            0
+          ],
+          "target_scene": "storeroom"
+        },
+        {
+          "id": "electric",
+          "type": "text",
+          "label": "电力配置",
+          "position": [
+            1.5,
+            1.6,
+            -1.0
+          ],
+          "body": "独立电表 60A 三相，可申请扩容至 100A。空调点位 4 个，预留新风管。"
+        }
       ]
     },
     {
@@ -28,14 +63,40 @@
       "label": "后厨/储藏",
       "splat_url": "https://sparkjs.dev/assets/splats/fireplace.spz",
       "size_mb": 4,
-      "start": [0, 1.4, 0.5],
-      "offset": [0, 0, 0],
+      "start": [
+        0,
+        1.0,
+        2.5
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"storage_size","type":"text","label":"储藏区","position":[0,0.8,0],
-         "body":"独立储藏 18 ㎡，含上下水接驳。可改造为后厨（明火餐饮需消防申报）。"},
-        {"id":"to_main","type":"nav","label":"回主店面","position":[1.2,1.0,1.0],
-         "target_scene":"shop_main"}
+        {
+          "id": "storage_size",
+          "type": "text",
+          "label": "储藏区",
+          "position": [
+            0,
+            0.8,
+            0
+          ],
+          "body": "独立储藏 18 ㎡，含上下水接驳。可改造为后厨（明火餐饮需消防申报）。"
+        },
+        {
+          "id": "to_main",
+          "type": "nav",
+          "label": "回主店面",
+          "position": [
+            1.2,
+            1.0,
+            1.0
+          ],
+          "target_scene": "shop_main"
+        }
       ]
     }
   ],
@@ -46,5 +107,10 @@
     "button": "预约看铺",
     "alert": "请添加微信：cre-broker · 周一至周日均可预约现场看铺"
   },
-  "features": ["hotspot_nav", "measure", "dollhouse", "annotation"]
+  "features": [
+    "hotspot_nav",
+    "measure",
+    "dollhouse",
+    "annotation"
+  ]
 }

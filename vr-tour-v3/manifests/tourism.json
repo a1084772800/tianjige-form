@@ -11,17 +11,52 @@
       "label": "山顶观景台",
       "splat_url": "https://sparkjs.dev/assets/splats/fireplace.spz",
       "size_mb": 4,
-      "start": [0, 1.6, 1.5],
-      "offset": [0, 0, 0],
+      "start": [
+        0,
+        1.0,
+        2.5
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"viewpoint","type":"text","label":"东向云海","position":[0.5,0.8,-0.5],
-         "body":"海拔 1,873 米。日出云海最佳观景台，每年 11-2 月雪后云雾出现概率 80%。建议清晨 5:30 抵达。"},
-        {"id":"ticket_link","type":"link","label":"购票","position":[-1.0,1.0,0.5],
-         "url":"https://example-tour.com/buy?scene=summit",
-         "body":"成人门票 ¥120 · 学生 ¥60 · 儿童免票"},
-        {"id":"to_lake","type":"nav","label":"去湖区","position":[1.0,0.8,1.0],
-         "target_scene":"lake"}
+        {
+          "id": "viewpoint",
+          "type": "text",
+          "label": "东向云海",
+          "position": [
+            0.5,
+            0.8,
+            -0.5
+          ],
+          "body": "海拔 1,873 米。日出云海最佳观景台，每年 11-2 月雪后云雾出现概率 80%。建议清晨 5:30 抵达。"
+        },
+        {
+          "id": "ticket_link",
+          "type": "link",
+          "label": "购票",
+          "position": [
+            -1.0,
+            1.0,
+            0.5
+          ],
+          "url": "https://example-tour.com/buy?scene=summit",
+          "body": "成人门票 ¥120 · 学生 ¥60 · 儿童免票"
+        },
+        {
+          "id": "to_lake",
+          "type": "nav",
+          "label": "去湖区",
+          "position": [
+            1.0,
+            0.8,
+            1.0
+          ],
+          "target_scene": "lake"
+        }
       ]
     },
     {
@@ -29,14 +64,40 @@
       "label": "高山湖",
       "splat_url": "https://storage.googleapis.com/forge-dev-public/painted_bedroom.spz",
       "size_mb": 8,
-      "start": [0, 1.6, 1.5],
-      "offset": [0, 0, 0],
+      "start": [
+        0,
+        1.5,
+        1.5
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"lake_info","type":"text","label":"翠湖","position":[0,0.6,-0.5],
-         "body":"高山堰塞湖，水深 28 米，最低气温 -18℃。四季冰面 11 月至次年 4 月。"},
-        {"id":"to_summit","type":"nav","label":"回观景台","position":[-1.0,1.0,1.0],
-         "target_scene":"summit"}
+        {
+          "id": "lake_info",
+          "type": "text",
+          "label": "翠湖",
+          "position": [
+            0,
+            0.6,
+            -0.5
+          ],
+          "body": "高山堰塞湖，水深 28 米，最低气温 -18℃。四季冰面 11 月至次年 4 月。"
+        },
+        {
+          "id": "to_summit",
+          "type": "nav",
+          "label": "回观景台",
+          "position": [
+            -1.0,
+            1.0,
+            1.0
+          ],
+          "target_scene": "summit"
+        }
       ]
     }
   ],
@@ -47,5 +108,10 @@
     "button": "立即购票",
     "alert": "购票链接：https://example-tour.com · 24h 取消免手续费"
   },
-  "features": ["hotspot_nav", "measure", "dollhouse", "annotation"]
+  "features": [
+    "hotspot_nav",
+    "measure",
+    "dollhouse",
+    "annotation"
+  ]
 }

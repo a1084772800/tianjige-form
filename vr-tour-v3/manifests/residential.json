@@ -11,16 +11,51 @@
       "label": "舒适小屋",
       "splat_url": "https://storage.googleapis.com/forge-dev-public/asundqui/cozy-xr/cozy_cottage-lod.spz",
       "size_mb": 93,
-      "start": [0, 1.6, 0],
-      "offset": [0, -1, 0],
+      "start": [
+        0,
+        1.5,
+        1.5
+      ],
+      "offset": [
+        0,
+        -1,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"living_info","type":"text","label":"客厅","position":[1.2,0.4,0.5],
-         "body":"开放式客厅 24 ㎡，南向落地窗，自然采光佳。沙发位置可定制布艺/真皮，茶几含隐藏储物。"},
-        {"id":"to_bedroom","type":"nav","label":"去卧室","position":[-1.0,0.6,-0.5],
-         "target_scene":"bedroom"},
-        {"id":"price_card","type":"text","label":"装修预算","position":[0.5,1.2,-1.0],
-         "body":"全屋整装参考：10-15 万 / 80 ㎡。包含基础硬装 + 主材 + 软装搭配。可分期。"}
+        {
+          "id": "living_info",
+          "type": "text",
+          "label": "客厅",
+          "position": [
+            1.2,
+            0.4,
+            0.5
+          ],
+          "body": "开放式客厅 24 ㎡，南向落地窗，自然采光佳。沙发位置可定制布艺/真皮，茶几含隐藏储物。"
+        },
+        {
+          "id": "to_bedroom",
+          "type": "nav",
+          "label": "去卧室",
+          "position": [
+            -1.0,
+            0.6,
+            -0.5
+          ],
+          "target_scene": "bedroom"
+        },
+        {
+          "id": "price_card",
+          "type": "text",
+          "label": "装修预算",
+          "position": [
+            0.5,
+            1.2,
+            -1.0
+          ],
+          "body": "全屋整装参考：10-15 万 / 80 ㎡。包含基础硬装 + 主材 + 软装搭配。可分期。"
+        }
       ]
     },
     {
@@ -28,14 +63,40 @@
       "label": "彩绘卧室",
       "splat_url": "https://storage.googleapis.com/forge-dev-public/painted_bedroom.spz",
       "size_mb": 8,
-      "start": [0, 1.5, 1.5],
-      "offset": [0, 0, 0],
+      "start": [
+        0,
+        1.5,
+        1.5
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
       "scale_to_meters": 1.0,
       "hotspots": [
-        {"id":"bed_info","type":"text","label":"主卧","position":[0,0.8,-0.5],
-         "body":"双人主卧 18 ㎡，可放 1.8m × 2.0m 大床。衣柜位 2.4m × 0.6m。"},
-        {"id":"to_living","type":"nav","label":"返回客厅","position":[1.0,1.0,1.5],
-         "target_scene":"cottage"}
+        {
+          "id": "bed_info",
+          "type": "text",
+          "label": "主卧",
+          "position": [
+            0,
+            0.8,
+            -0.5
+          ],
+          "body": "双人主卧 18 ㎡，可放 1.8m × 2.0m 大床。衣柜位 2.4m × 0.6m。"
+        },
+        {
+          "id": "to_living",
+          "type": "nav",
+          "label": "返回客厅",
+          "position": [
+            1.0,
+            1.0,
+            1.5
+          ],
+          "target_scene": "cottage"
+        }
       ]
     }
   ],
@@ -46,5 +107,10 @@
     "button": "联系咨询",
     "alert": "请添加微信：lingxi-ai · 上传你的空间扫描，24h 内拿到 VR 链接"
   },
-  "features": ["hotspot_nav", "measure", "dollhouse", "annotation"]
+  "features": [
+    "hotspot_nav",
+    "measure",
+    "dollhouse",
+    "annotation"
+  ]
 }
