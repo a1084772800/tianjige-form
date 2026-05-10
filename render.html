@@ -118,6 +118,14 @@ window.addEventListener('message', function(e) {
   }
 });
 
+// 外层 URL hash 变化（user paste 新 #token=xxx 后回车）→ 主动通知 iframe 重新读
+window.addEventListener('hashchange', function() {
+  var frame = document.getElementById('render-frame');
+  if (frame && frame.contentWindow) {
+    try { frame.contentWindow.postMessage({ type: 'hash', hash: location.hash || '' }, '*'); } catch(e) {}
+  }
+});
+
 function showLoading(msg) {
   document.getElementById('loading').style.display = 'flex';
   document.getElementById('error').style.display = 'none';
