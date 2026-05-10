@@ -1,0 +1,36 @@
+{
+  "industry": "demo-singleimg-B",
+  "name": "单图 -> Veo 360 视频 panorama",
+  "brand_short": "B",
+  "brand_sub": "Gemini Studio Veo (1280x720, 8s, h264)",
+  "brand_color": "#ff8a3d",
+  "brand_color_2": "#ffb84d",
+  "scenes": [
+    {
+      "id": "veo_video",
+      "label": "Veo 视频",
+      "video_url": "./assets/demo-singleimg/veo_orbit.mp4",
+      "size_mb": 3,
+      "start": [0, 0, 0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {
+          "id": "honesty",
+          "type": "text",
+          "label": "诚实说明",
+          "position": [0, 0, -1],
+          "body": "Veo 输出 1280x720 16:9 普通视频，并非真正 equirect 360 全景。这里把它贴到球面后会有明显几何失真，仅作为 demo 形式存在。商业落地需要 image-to-video + 360° aspect 的工具链。"
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "Path B · Veo 文生 8s 视频成功",
+    "price": "Gemini Pro 订阅成本",
+    "desc": "Veo 不支持 image conditioning + 16:9 输出，球面贴图必然失真",
+    "button": "了解",
+    "alert": "Path B 已生成 Veo 8s 视频，但映射到球面后失真严重。"
+  },
+  "features": ["hotspot_nav", "annotation"]
+}

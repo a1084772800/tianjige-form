@@ -46,6 +46,33 @@ export class SceneController {
 
     this.sparkControls = new SparkControls({ canvas: this.renderer.domElement });
     this.xr = new SparkXr({ renderer: this.renderer });
+    this._attachDesktopPanoLook();
+  }
+
+  // Desktop mouse-drag look (only used in panorama mode; no-op otherwise).
+  _attachDesktopPanoLook() {
+    let dragging = false, lx = 0, ly = 0;
+    this.canvas.addEventListener("mousedown", (e) => {
+      const isPano = this.currentSceneDef?.scene_type === "equirect" || this.currentSceneDef?.scene_type === "video";
+      if (!isPano) return;
+      dragging = true; lx = e.clientX; ly = e.clientY;
+    });
+    window.addEventListener("mouseup", () => { dragging = false; });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lx, dy = e.clientY - ly;
+      lx = e.clientX; ly = e.clientY;
+      this.lookInput.yaw -= dx * 0.0034;
+      this.lookInput.pitch -= dy * 0.0034;
+      this.lookInput.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.lookInput.pitch));
+    });
+    this.canvas.addEventListener("wheel", (e) => {
+      const isPano = this.currentSceneDef?.scene_type === "equirect" || this.currentSceneDef?.scene_type === "video";
+      if (!isPano) return;
+      this.camera.fov = Math.max(35, Math.min(92, this.camera.fov + e.deltaY * 0.04));
+      this.camera.updateProjectionMatrix();
+      e.preventDefault();
+    }, { passive: false });
   }
 
   handleResize() {
@@ -114,26 +141,31 @@ export class SceneController {
     if (this.currentSceneId === sceneId) return;
     this.currentSceneId = sceneId;
 
-    // Fade out by scaling alpha (Spark does not expose easy alpha — fallback: fade canvas)
     this.canvas.style.transition = "opacity .3s";
     this.canvas.style.opacity = "0.18";
 
-    if (this.splatMesh) {
-      this.scene.remove(this.splatMesh);
-      this.splatMesh = null;
-    }
+    if (this.splatMesh) { this.scene.remove(this.splatMesh); this.splatMesh = null; }
+    if (this.panoMesh) { this.scene.remove(this.panoMesh); this.panoMesh.geometry?.dispose(); this.panoMesh.material?.map?.dispose?.(); this.panoMesh.material?.dispose(); this.panoMesh = null; }
+    if (this.panoVideo) { try { this.panoVideo.pause(); this.panoVideo.removeAttribute("src"); this.panoVideo.load(); } catch {} this.panoVideo = null; }
 
     document.getElementById("loader")?.classList.remove("gone");
+    const t = sceneDef.scene_type || "splat";
+    if (t === "splat") return this._loadSceneSplat(sceneDef);
+    if (t === "equirect") return this._loadSceneEquirect(sceneDef);
+    if (t === "video") return this._loadSceneVideo(sceneDef);
+    throw new Error(`unknown scene_type ${t}`);
+  }
+
+  async _loadSceneSplat(sceneDef) {
     let objUrl;
     try {
       objUrl = await this.fetchSplat(sceneDef.splat_url, sceneDef.size_mb);
     } catch (e) {
       const lt = document.getElementById("loader-text");
       if (lt) lt.textContent = "load failed: " + e.message.slice(0, 60);
-      console.error("[scene] load fail", e);
+      console.error("[scene] splat load fail", e);
       return;
     }
-
     this.splatMesh = new SplatMesh({
       url: objUrl,
       onLoad: () => {
@@ -145,15 +177,79 @@ export class SceneController {
     });
     this.splatMesh.position.set(...sceneDef.offset);
     this.scene.add(this.splatMesh);
-
-    // Backup: hide loader after 1.2s even if onLoad late (UX over completeness)
     setTimeout(() => {
       document.getElementById("loader")?.classList.add("gone");
       this.canvas.style.opacity = "1";
     }, 1200);
-
     this.currentSceneDef = sceneDef;
-    if (this.onSceneChange) this.onSceneChange(sceneId);
+    if (this.onSceneChange) this.onSceneChange(sceneDef.id);
+  }
+
+  async _loadSceneEquirect(sceneDef) {
+    const lt = document.getElementById("loader-text");
+    if (lt) lt.textContent = `loading: ${sceneDef.label}`;
+    const tex = await new Promise((resolve, reject) => {
+      const loader = new THREE.TextureLoader();
+      loader.load(sceneDef.equirect_url, resolve, undefined, reject);
+    }).catch(e => { if (lt) lt.textContent = "equirect load fail: " + e.message?.slice(0, 60); console.error(e); return null; });
+    if (!tex) return;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this._buildPanoSphere(tex, sceneDef);
+  }
+
+  async _loadSceneVideo(sceneDef) {
+    const lt = document.getElementById("loader-text");
+    if (lt) lt.textContent = `loading: ${sceneDef.label}`;
+    const v = document.createElement("video");
+    v.src = sceneDef.video_url;
+    v.crossOrigin = "anonymous";
+    v.loop = true;
+    v.muted = true;
+    v.playsInline = true;
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    await new Promise((res, rej) => {
+      v.addEventListener("loadeddata", res, { once: true });
+      v.addEventListener("error", rej, { once: true });
+      setTimeout(() => rej(new Error("video load timeout")), 20000);
+    }).catch(e => { if (lt) lt.textContent = "video load fail: " + e.message?.slice(0, 60); console.error(e); });
+    this.panoVideo = v;
+    const tex = new THREE.VideoTexture(v);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    this._buildPanoSphere(tex, sceneDef);
+    try { await v.play(); } catch (e) { console.warn("video autoplay blocked", e); }
+  }
+
+  _buildPanoSphere(texture, sceneDef) {
+    // Inside-facing sphere: scale.x = -1 inverts faces.
+    const geo = new THREE.SphereGeometry(50, 64, 32);
+    const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.x = -1;
+    this.scene.add(mesh);
+    this.panoMesh = mesh;
+
+    // Camera rig sits at the sphere center; yaw=0 looks at the +Z (front-center)
+    this.rig.position.set(0, 0, 0);
+    this.lookInput.yaw = 0;
+    this.lookInput.pitch = 0;
+    this.rig.rotation.set(0, 0, 0);
+    this.camera.rotation.set(0, 0, 0);
+
+    // Soft bounds: keep camera at center (panorama is single-viewpoint).
+    this.softBounds = { minX: -0.001, maxX: 0.001, minY: -0.001, maxY: 0.001, minZ: -0.001, maxZ: 0.001 };
+    this.moveSpeedScale = 0;
+    // Synthetic bbox so measure / dollhouse don't crash (they will be no-ops on pano).
+    this.bbox = new THREE.Box3(new THREE.Vector3(-1, -1, -1), new THREE.Vector3(1, 1, 1));
+    this.bboxSize = new THREE.Vector3(2, 2, 2);
+
+    document.getElementById("loader")?.classList.add("gone");
+    this.canvas.style.opacity = "1";
+    window.__splatReady = true;
+    this.currentSceneDef = sceneDef;
+    if (this.onSceneChange) this.onSceneChange(sceneDef.id);
   }
 
   fitCamera(sceneDef) {
@@ -227,7 +323,15 @@ export class SceneController {
     }
 
     const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-    if (!isTouch && this.mode === "walk") {
+    const isPano = this.currentSceneDef?.scene_type === "equirect" || this.currentSceneDef?.scene_type === "video";
+    if (isPano) {
+      // Panorama: drive look from lookInput on both desktop & touch, ignore sparkControls.
+      this.rig.position.set(0, 0, 0);
+      this.rig.rotation.y = this.lookInput.yaw;
+      this.camera.rotation.x = this.lookInput.pitch;
+      this.camera.rotation.y = 0;
+      this.camera.rotation.z = 0;
+    } else if (!isTouch && this.mode === "walk") {
       this.sparkControls.update(this.rig, this.camera);
     } else if (this.mode === "walk") {
       this.rig.rotation.y = this.lookInput.yaw;

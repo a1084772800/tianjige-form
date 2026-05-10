@@ -1,0 +1,43 @@
+{
+  "industry": "demo-singleimg-A",
+  "name": "单图 -> Tripo 3D mesh (跳过)",
+  "brand_short": "A",
+  "brand_sub": "Tripo / Meshy / Rodin API · BLOCKED — no key",
+  "brand_color": "#9b59ff",
+  "brand_color_2": "#c79bff",
+  "scenes": [
+    {
+      "id": "blocked",
+      "label": "状态",
+      "equirect_url": "./assets/demo-singleimg/blocked_A.jpg",
+      "size_mb": 1,
+      "start": [0, 0, 0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {
+          "id": "why",
+          "type": "text",
+          "label": "为什么跳过",
+          "position": [0, 0, -1],
+          "body": "环境中未发现任何 Tripo / Meshy / Rodin API key（~/.tripo_key / ~/.meshy_key / ~/.rodin_key 均不存在）。此路径需要 owner 先注册任一供应商账号并把 key 落盘后才能跑。其余 3 个 path（B/C/D）已照常并行实测。"
+        },
+        {
+          "id": "fix",
+          "type": "text",
+          "label": "如何启用",
+          "position": [-0.3, 0, -1],
+          "body": "推荐 Tripo3D（https://platform.tripo3d.ai 免费档可用）。注册后写到 ~/.tripo_key 即可重跑。"
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "Path A · API key 缺失，已跳过",
+    "price": "blocked",
+    "desc": "需要 owner 注册 Tripo/Meshy/Rodin",
+    "button": "知道了",
+    "alert": "Path A blocked — no API keys configured."
+  },
+  "features": ["hotspot_nav", "annotation"]
+}

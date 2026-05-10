@@ -1,0 +1,36 @@
+{
+  "industry": "demo-singleimg-D",
+  "name": "单图 fallback equirect",
+  "brand_short": "D",
+  "brand_sub": "Single Image -> Equirect Sphere (PIL fallback)",
+  "brand_color": "#7a5cff",
+  "brand_color_2": "#a78bff",
+  "scenes": [
+    {
+      "id": "room",
+      "label": "客餐厅",
+      "equirect_url": "./assets/demo-singleimg/equirect_4k.jpg",
+      "size_mb": 1,
+      "start": [0, 0, 0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {
+          "id": "info",
+          "type": "text",
+          "label": "说明",
+          "position": [0, 0, -1],
+          "body": "这是 Path D（PIL 假全景）：单图作为前 180 度，背 180 度由镜像+模糊+暗化合成，上下两端做天花/地板渐变。视觉上不真实，但可在 vr-tour-v3 viewer 中用作传统 360 全景体验。"
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "单图 -> 3D 多路径实测 · Path D",
+    "price": "0 cost",
+    "desc": "PIL 合成假全景，无需任何外部 API",
+    "button": "了解",
+    "alert": "Path D 是 fallback 方案。装修参考图 demo。"
+  },
+  "features": ["hotspot_nav", "annotation"]
+}

@@ -7,8 +7,11 @@ const BUILTIN_INDUSTRIES = [
 
 export async function loadManifest({ industry, customManifestUrl }) {
   const url = customManifestUrl || `./manifests/${industry}.json`;
-  if (!customManifestUrl && !BUILTIN_INDUSTRIES.includes(industry)) {
-    throw new Error(`unknown industry: ${industry}. valid: ${BUILTIN_INDUSTRIES.join(",")}`);
+  // Allow built-ins + any `demo-*` industry (escape hatch for experiments).
+  const isBuiltin = BUILTIN_INDUSTRIES.includes(industry);
+  const isDemo = /^demo-[a-z0-9-]+$/i.test(industry || "");
+  if (!customManifestUrl && !isBuiltin && !isDemo) {
+    throw new Error(`unknown industry: ${industry}. valid: ${BUILTIN_INDUSTRIES.join(",")} or demo-*`);
   }
   const res = await fetch(url, { cache: "no-cache" });
   if (!res.ok) throw new Error(`manifest http ${res.status}: ${url}`);
@@ -21,7 +24,10 @@ function validate(m) {
   if (!Array.isArray(m.scenes) || m.scenes.length === 0) throw new Error("manifest.scenes empty");
   for (const s of m.scenes) {
     if (!s.id) throw new Error("scene.id missing");
-    if (!s.splat_url) throw new Error(`scene[${s.id}].splat_url missing`);
+    // Scene must declare exactly ONE source: splat_url, equirect_url, or video_url
+    const sources = [s.splat_url, s.equirect_url, s.video_url].filter(Boolean);
+    if (sources.length === 0) throw new Error(`scene[${s.id}] needs splat_url | equirect_url | video_url`);
+    s.scene_type = s.splat_url ? "splat" : s.equirect_url ? "equirect" : "video";
     s.label = s.label || s.id;
     s.start = s.start || [0, 1.6, 0];
     s.offset = s.offset || [0, 0, 0];

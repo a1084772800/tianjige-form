@@ -1,0 +1,43 @@
+{
+  "industry": "demo-singleimg-C",
+  "name": "单图 -> Polycam GS (跳过)",
+  "brand_short": "C",
+  "brand_sub": "Polycam Web Splat · BLOCKED — login + Path B prereq missing",
+  "brand_color": "#3da5ff",
+  "brand_color_2": "#7bc4ff",
+  "scenes": [
+    {
+      "id": "blocked",
+      "label": "状态",
+      "equirect_url": "./assets/demo-singleimg/blocked_C.jpg",
+      "size_mb": 1,
+      "start": [0, 0, 0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {
+          "id": "why",
+          "type": "text",
+          "label": "为什么跳过",
+          "position": [0, 0, -1],
+          "body": "CDP 9222 当前 17 个 tab 中无 polycam.com 标签，且 Polycam 视频转 GS 依赖 Path B（Veo 360 视频）先成功。本次 Path B 受 Gemini Tools 按钮失效阻塞，因此 C 自动跳过。"
+        },
+        {
+          "id": "fix",
+          "type": "text",
+          "label": "如何启用",
+          "position": [-0.3, 0, -1],
+          "body": "owner 在主 Chrome 打开 https://poly.cam 并登录账号 → 主线程会检测到 polycam tab → 自动重跑 C。"
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "Path C · 双重阻塞，已跳过",
+    "price": "blocked",
+    "desc": "polycam 未登录 + Path B 前置失败",
+    "button": "知道了",
+    "alert": "Path C blocked — polycam not logged in & Path B failed."
+  },
+  "features": ["hotspot_nav", "annotation"]
+}
