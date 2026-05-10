@@ -104,6 +104,17 @@ window.addEventListener('message', function(e) {
     if (/^https?:\/\//i.test(d.url)) {
       window.top.location.href = d.url;
     }
+  } else if (d.type === 'getHash') {
+    // 沙箱 iframe 拿不到 parent.location.hash（cross-origin），走 postMessage 桥接
+    try { e.source.postMessage({ type: 'hash', hash: location.hash || '' }, '*'); } catch(err) {}
+  } else if (d.type === 'setHash' && typeof d.hash === 'string') {
+    // iframe 内 token-status 编辑后回写 parent URL → owner 刷新仍持久
+    try {
+      var newHash = d.hash;
+      if (newHash && newHash.charAt(0) !== '#') newHash = '#' + newHash;
+      // 用 replaceState 不进 history（owner 反复点不堆栈）
+      history.replaceState(null, '', location.pathname + location.search + newHash);
+    } catch(err) {}
   }
 });
 
