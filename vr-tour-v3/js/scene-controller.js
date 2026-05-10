@@ -201,13 +201,17 @@ export class SceneController {
     const lt = document.getElementById("loader-text");
     if (lt) lt.textContent = `loading: ${sceneDef.label}`;
     const v = document.createElement("video");
-    v.src = sceneDef.video_url;
     v.crossOrigin = "anonymous";
     v.loop = true;
     v.muted = true;
     v.playsInline = true;
     v.setAttribute("playsinline", "");
     v.setAttribute("webkit-playsinline", "");
+    v.setAttribute("autoplay", "");
+    v.preload = "auto";
+    v.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none";
+    document.body.appendChild(v);
+    v.src = sceneDef.video_url;
     await new Promise((res, rej) => {
       v.addEventListener("loadeddata", res, { once: true });
       v.addEventListener("error", rej, { once: true });
