@@ -115,6 +115,19 @@ window.addEventListener('message', function(e) {
       // 用 replaceState 不进 history（owner 反复点不堆栈）
       history.replaceState(null, '', location.pathname + location.search + newHash);
     } catch(err) {}
+  } else if (d.type === 'getStorage' && typeof d.key === 'string') {
+    // sandboxed iframe 没 same-origin，自身 localStorage 抛 SecurityError；走 parent 代存
+    try {
+      var v = localStorage.getItem(d.key);
+      e.source.postMessage({ type: 'storage', key: d.key, value: v || '' }, '*');
+    } catch(err) {
+      e.source.postMessage({ type: 'storage', key: d.key, value: '' }, '*');
+    }
+  } else if (d.type === 'setStorage' && typeof d.key === 'string') {
+    try {
+      if (d.value) localStorage.setItem(d.key, d.value);
+      else localStorage.removeItem(d.key);
+    } catch(err) {}
   }
 });
 
