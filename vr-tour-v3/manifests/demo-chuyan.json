@@ -1,20 +1,20 @@
 {
   "industry": "demo-chuyan",
-  "name": "楚然的恐龙凳 · 3D 学习",
-  "brand_short": "学",
-  "brand_sub": "Chuyan Learning · 3D Toy Tour",
+  "name": "Mip-NeRF 360 Bonsai · 3DGS SOTA Demo",
+  "brand_short": "盆",
+  "brand_sub": "Mip-NeRF 360 · Bonsai 3DGS",
   "brand_color": "#5b9bd5",
   "brand_color_2": "#7fb8e6",
   "scenes": [
     {
       "id": "dinosaur_stool",
-      "label": "恐龙凳",
-      "splat_url": "https://raw.githubusercontent.com/a1084772800/tianjige-form/main/assets/splat/chuyan_dinosaur.ply",
-      "size_mb": 7,
+      "label": "Mip-NeRF 360 · Bonsai",
+      "splat_url": "https://raw.githubusercontent.com/a1084772800/tianjige-form/main/assets/splat/bonsai-7k.spz",
+      "size_mb": 19,
       "start": [
-        0,
-        0,
-        0
+        -0.8,
+        1.4,
+        0.7
       ],
       "offset": [
         0,
@@ -24,47 +24,47 @@
       "scale_to_meters": 1.0,
       "hotspots": [
         {
-          "id": "info_shape",
+          "id": "info_dataset",
           "type": "text",
-          "label": "造型",
+          "label": "数据集",
           "position": [
             0,
-            0.6,
+            2.0,
             0
           ],
-          "body": "霸王龙坐姿凳，绿色搪胶造型，凳面是 T-Rex 背部。8.7 秒手机环拍 17 帧重建，COLMAP 全 17 帧 registered。"
+          "body": "Mip-NeRF 360 Bonsai 场景。室内桌面 + 盆景 + 周围房间，1.16M Gaussian，7k 步训练，公开 SOTA 数据集。"
         },
         {
-          "id": "info_geom",
+          "id": "info_quality",
           "type": "text",
-          "label": "几何",
+          "label": "质量",
           "position": [
-            -0.8,
-            0.4,
-            0.6
+            -2,
+            1.5,
+            2
           ],
-          "body": "稀疏点云 1447 pts → 27.5K 高斯密化。Mac M2 无 CUDA 走 COLMAP sparse + 邻域抖动 densify，避免训练阶段。"
+          "body": "Spark 框架直渲 .spz 压缩格式 18.3MB（原 .splat 35MB），1.16M Gaussian Splatting，0 SH 带，几何 + 颜色已收敛清晰。"
         },
         {
           "id": "info_pipeline",
           "type": "text",
           "label": "管线",
           "position": [
-            0.8,
-            0.4,
-            0.6
+            2,
+            1.5,
+            2
           ],
-          "body": "video → ffmpeg 2fps → 17 frames → COLMAP feature/match/mapper (sparse 1447 pt, 3963 obs) → .splat 32B/gaussian。"
+          "body": "公开 splat → splat-transform → .spz → GitHub raw → vr-tour-v3 Spark 渲染。零本地训练，端到端 1 分钟。"
         }
       ]
     }
   ],
   "cta": {
-    "title": "3D Splat 教学 Demo",
-    "price": "8.7s 视频 → 3D",
-    "desc": "手机环拍即可生成 splat 场景",
+    "title": "Mip-NeRF 360 Bonsai 公开 splat",
+    "price": "1.16M Gaussian · 18.3MB",
+    "desc": "Spark 框架直渲 SOTA 3DGS 数据",
     "button": "了解更多",
-    "alert": "本场景由楚然恐龙凳实景重建"
+    "alert": "本场景为 Mip-NeRF 360 公开数据集 Bonsai 场景"
   },
   "features": [
     "hotspot_nav",
