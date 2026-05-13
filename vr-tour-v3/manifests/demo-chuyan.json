@@ -9,7 +9,7 @@
     {
       "id": "dinosaur_stool",
       "label": "恐龙凳",
-      "splat_url": "https://a1084772800.github.io/tianjige-form/assets/splat/chuyan_dinosaur.splat",
+      "splat_url": "https://raw.githubusercontent.com/a1084772800/tianjige-form/main/assets/splat/chuyan_dinosaur.splat",
       "size_mb": 1,
       "start": [
         0,
