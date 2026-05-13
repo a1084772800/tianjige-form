@@ -1,20 +1,20 @@
 {
   "industry": "demo-chuyan",
-  "name": "Mip-NeRF 360 Bonsai · 3DGS SOTA Demo",
-  "brand_short": "盆",
-  "brand_sub": "Mip-NeRF 360 · Bonsai 3DGS",
+  "name": "Forge Greyscale Room · 3DGS SOTA Demo",
+  "brand_short": "屋",
+  "brand_sub": "Forge / Niantic · Greyscale Room SPZ",
   "brand_color": "#5b9bd5",
   "brand_color_2": "#7fb8e6",
   "scenes": [
     {
       "id": "dinosaur_stool",
-      "label": "Mip-NeRF 360 · Bonsai",
-      "splat_url": "https://raw.githubusercontent.com/a1084772800/tianjige-form/main/assets/splat/bonsai-7k.spz",
-      "size_mb": 19,
+      "label": "Greyscale Room",
+      "splat_url": "https://raw.githubusercontent.com/a1084772800/tianjige-form/main/assets/splat/greyscale-room.spz",
+      "size_mb": 30,
       "start": [
-        -0.8,
-        1.4,
-        0.7
+        0,
+        0,
+        -2.1
       ],
       "offset": [
         0,
@@ -26,13 +26,13 @@
         {
           "id": "info_dataset",
           "type": "text",
-          "label": "数据集",
+          "label": "场景",
           "position": [
             0,
-            2.0,
-            0
+            1.5,
+            -1
           ],
-          "body": "Mip-NeRF 360 Bonsai 场景。室内桌面 + 盆景 + 周围房间，1.16M Gaussian，7k 步训练，公开 SOTA 数据集。"
+          "body": "Forge / Niantic 公开 Greyscale Room 场景。室内卧室空间，2M Gaussian，SPZ v2 legacy 格式 Spark 原生兼容。"
         },
         {
           "id": "info_quality",
@@ -40,10 +40,10 @@
           "label": "质量",
           "position": [
             -2,
-            1.5,
-            2
+            1.0,
+            -1
           ],
-          "body": "Spark 框架直渲 .spz 压缩格式 18.3MB（原 .splat 35MB），1.16M Gaussian Splatting，0 SH 带，几何 + 颜色已收敛清晰。"
+          "body": "Spark 框架直渲 .spz 压缩格式 30MB，2M Gaussian Splatting，SH degree=0，几何 + 颜色清晰收敛。"
         },
         {
           "id": "info_pipeline",
@@ -51,20 +51,20 @@
           "label": "管线",
           "position": [
             2,
-            1.5,
-            2
+            1.0,
+            -1
           ],
-          "body": "公开 splat → splat-transform → .spz → GitHub raw → vr-tour-v3 Spark 渲染。零本地训练，端到端 1 分钟。"
+          "body": "公开 SPZ → GitHub raw → vr-tour-v3 Spark 渲染。零本地训练，端到端验证 SOTA 真 3DGS 质量。"
         }
       ]
     }
   ],
   "cta": {
-    "title": "Mip-NeRF 360 Bonsai 公开 splat",
-    "price": "1.16M Gaussian · 18.3MB",
-    "desc": "Spark 框架直渲 SOTA 3DGS 数据",
+    "title": "Forge Greyscale Room 公开 splat",
+    "price": "2M Gaussian · 30MB",
+    "desc": "Spark 框架直渲 SOTA 3DGS 室内场景",
     "button": "了解更多",
-    "alert": "本场景为 Mip-NeRF 360 公开数据集 Bonsai 场景"
+    "alert": "本场景为 Forge / Niantic 公开 SPZ 数据集 Greyscale Room"
   },
   "features": [
     "hotspot_nav",
