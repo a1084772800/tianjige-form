@@ -1,0 +1,53 @@
+{
+  "industry": "education",
+  "name": "楚然的恐龙凳 · 3D 学习",
+  "brand_short": "学",
+  "brand_sub": "Chuyan Learning · 3D Toy Tour",
+  "brand_color": "#5b9bd5",
+  "brand_color_2": "#7fb8e6",
+  "scenes": [
+    {
+      "id": "dinosaur_stool",
+      "label": "恐龙凳",
+      "splat_url": "https://a1084772800.github.io/tianjige-form/assets/splat/chuyan_dinosaur.splat",
+      "size_mb": 1,
+      "start": [0, 0.5, 2.0],
+      "offset": [0, 0, 0],
+      "scale_to_meters": 1.0,
+      "hotspots": [
+        {
+          "id": "info_shape",
+          "type": "text",
+          "label": "造型",
+          "position": [0, 0.6, 0],
+          "body": "霸王龙坐姿凳，绿色搪胶造型，凳面是 T-Rex 背部。8.7 秒手机环拍 17 帧重建，COLMAP 全 17 帧 registered。"
+        },
+        {
+          "id": "info_geom",
+          "type": "text",
+          "label": "几何",
+          "position": [-0.8, 0.4, 0.6],
+          "body": "稀疏点云 1447 pts → 27.5K 高斯密化。Mac M2 无 CUDA 走 COLMAP sparse + 邻域抖动 densify，避免训练阶段。"
+        },
+        {
+          "id": "info_pipeline",
+          "type": "text",
+          "label": "管线",
+          "position": [0.8, 0.4, 0.6],
+          "body": "video → ffmpeg 2fps → 17 frames → COLMAP feature/match/mapper (sparse 1447 pt, 3963 obs) → .splat 32B/gaussian。"
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "3D Splat 教学 Demo",
+    "price": "8.7s 视频 → 3D",
+    "desc": "手机环拍即可生成 splat 场景",
+    "button": "了解更多",
+    "alert": "本场景由楚然恐龙凳实景重建"
+  },
+  "features": [
+    "hotspot_nav",
+    "annotation"
+  ]
+}
