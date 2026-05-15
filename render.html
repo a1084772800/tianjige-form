@@ -92,6 +92,63 @@ const FETCH_TIMEOUT = 15000;
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
 
+// ── Scroll position 持久化（PARENT 端，因 iframe height=auto 实际滚的是外层）───
+// iframe 用 sandbox（无 allow-same-origin），parent.body 把 iframe.style.height 设成
+// 全内容高度，所以 OUTER document 才是真正可滚动的；iframe 内部的 window.scroll
+// 事件根本不会触发——bridge 里的 saveScroll 是僵尸代码（保留兼容旧 srcdoc）。
+// 这里在 PARENT 加 listener，按 id 分 key，保证 PWA/X5/iOS Safari 切回不丢位置。
+var SCROLL_KEY = 'scroll_render_' + (id || 'unknown');
+var pScrollRestoring = true;
+var pScrollSaveTimer = null;
+function pFlushScroll() {
+  if (pScrollRestoring) return;
+  if (pScrollSaveTimer) { clearTimeout(pScrollSaveTimer); pScrollSaveTimer = null; }
+  try {
+    var y = window.scrollY || window.pageYOffset || 0;
+    if (y > 0) localStorage.setItem(SCROLL_KEY, String(y));
+    else localStorage.removeItem(SCROLL_KEY);
+  } catch(_) {}
+}
+function pSaveScroll() {
+  if (pScrollRestoring) return;
+  if (pScrollSaveTimer) clearTimeout(pScrollSaveTimer);
+  pScrollSaveTimer = setTimeout(pFlushScroll, 400);
+}
+window.addEventListener('scroll', pSaveScroll, { passive: true });
+// freeze 前最后一次机会
+window.addEventListener('pagehide', pFlushScroll);
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') pFlushScroll();
+});
+
+function pRestoreScroll() {
+  var y = 0;
+  try { y = parseInt(localStorage.getItem(SCROLL_KEY) || '0', 10) || 0; } catch(_) {}
+  if (y <= 0) { pScrollRestoring = false; return; }
+  var tries = 0;
+  function tryIt() {
+    tries++;
+    // 必须等 iframe.style.height 已被 resize bridge 设大；否则 document 高度不够 scrollTo 截到顶
+    var sh = document.documentElement.scrollHeight;
+    if (sh < y + 100 && tries < 40) { setTimeout(tryIt, 200); return; }
+    window.scrollTo(0, y);
+    var actual = window.scrollY || window.pageYOffset || 0;
+    if (Math.abs(actual - y) > 10 && tries < 40) setTimeout(tryIt, 200);
+    else pScrollRestoring = false;
+  }
+  // 等 srcdoc 渲染 + bridge resize 一波；800ms 起步更稳（render.html 测试 iframe 800ms 才高度到位）
+  setTimeout(tryIt, 800);
+}
+// load 时 iframe 可能还没回 resize，pRestoreScroll 自己重试到高度够
+window.addEventListener('load', function() { setTimeout(pRestoreScroll, 100); });
+// bfcache 回来（iOS Safari / 安卓 Chrome 后台不 reload 走这里）
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    pScrollRestoring = true;
+    setTimeout(pRestoreScroll, 50);
+  }
+});
+
 // 桥接：iframe 因 sandbox 无 same-origin / top-navigation，走 postMessage
 window.addEventListener('message', function(e) {
   var frame = document.getElementById('render-frame');
