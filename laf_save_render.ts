@@ -66,7 +66,7 @@ export default async function (ctx: FunctionContext) {
   }
 
   // 默认7天过期，0=永不过期
-  const ttl = expires_in || 7 * 24 * 3600 * 1000
+  const ttl = expires_in ?? 7 * 24 * 3600 * 1000
   const expires_at = ttl > 0 ? Date.now() + ttl : 0
 
   try {
