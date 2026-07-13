@@ -161,6 +161,11 @@ window.addEventListener('message', function(e) {
     if (/^https?:\/\//i.test(d.url)) {
       window.top.location.href = d.url;
     }
+  } else if (d.type === 'title' && typeof d.text === 'string' && d.text.trim()) {
+    // 页面自定义标签页标题（可选桥）：内容页发 {type:'title', text} 覆盖默认
+    // 的「天机阁 · <title>」前缀（2026-07-13 乔氏驾驶舱去品牌残留；向后兼容，
+    // 不发消息的页面行为不变）
+    document.title = d.text.slice(0, 80);
   } else if (d.type === 'getHash') {
     // 沙箱 iframe 拿不到 parent.location.hash（cross-origin），走 postMessage 桥接
     try { e.source.postMessage({ type: 'hash', hash: location.hash || '' }, '*'); } catch(err) {}
