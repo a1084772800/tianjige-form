@@ -4,7 +4,7 @@
 - 代码已修复 + 提交：commit e500b0d
 - `render.html` 已 push 到 GitHub Pages，自动部署完成（iframe sandbox 收紧 + postMessage 桥接）
 - `laf_save_render.ts` 待部署到 Laf（PAT 已失效，需要 owner 给 fresh PAT 再跑）
-- `RENDER_SAVE_TOKEN` 已生成并写入 `~/.env`：`3ydcdPZtblACeqarJTSmOGUmv_j_Bkmrmfw1AcZRD50`
+- `RENDER_SAVE_TOKEN` 必须使用现场生成的新随机值；文档禁止记录真实密钥。
 
 ## owner 端三步部署
 
@@ -19,7 +19,7 @@ vim ~/.env
 
 ### 3. 部署 save_render（带 RENDER_SAVE_TOKEN env）
 Sealos web → 应用管理 → v609a76lof → save_render 函数 →
-**编辑环境变量**：新增 `RENDER_SAVE_TOKEN=3ydcdPZtblACeqarJTSmOGUmv_j_Bkmrmfw1AcZRD50`
+**编辑环境变量**：新增 `RENDER_SAVE_TOKEN=<现场生成的新随机值>`
 （必须在云函数侧设置，否则函数会拒所有请求）
 
 然后部署代码：
