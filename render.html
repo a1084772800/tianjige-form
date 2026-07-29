@@ -117,7 +117,7 @@ var pSaveTimer = null, pTries = 0, pLastNote = '';
 // 内容几乎铺满整个 iframe，用户的 touch/wheel 落在**跨域 iframe 内**、冒泡不到 parent，
 // 所以手势信号由 bridge 转发（下方 {type:'gesture'}）。这里再加一道不依赖 iframe 配合的
 // 兜底：页面刚缩水的一瞬间，浏览器截断 scrollY 派出的 scroll 事件一律不落盘。
-var pLastDocH = 0, pShrinkUntil = 0, pShrinkFrom = 0;
+var pLastDocH = 0, pShrinkUntil = 0, pShrinkFrom = 0, pShrinkY = 0;
 
 try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch(_) {}
 
@@ -125,10 +125,13 @@ function pNote(s) { pLastNote = s; pDbgRender(); }
 
 function pFlushScroll() {
   if (pTarget > 0 && !pUserTouched) return;   // 守护期：任何非手势滚动都不落盘
-  if (Date.now() < pShrinkUntil) { pNote('shrink guard'); return; }
+  // 收缩抑制只挡"被截断"这一种：截断只会把 scrollY 往**小**里改，绝不会变大。
+  // 所以仅当「抑制窗内 + 用户没碰过屏幕 + 位置比缩水前更靠上」三者同时成立才吞掉这次保存；
+  // 用户在重排期主动往下滑（y 变大）是明确意图，必须存（0729 回归：抑制窗吃掉用户首次滚动）。
+  var y = window.scrollY || window.pageYOffset || 0;
+  if (Date.now() < pShrinkUntil && !pUserTouched && y < pShrinkY) { pNote('shrink guard'); return; }
   if (pSaveTimer) { clearTimeout(pSaveTimer); pSaveTimer = null; }
   try {
-    var y = window.scrollY || window.pageYOffset || 0;
     if (y > 0) localStorage.setItem(SCROLL_KEY, String(y));
     else localStorage.removeItem(SCROLL_KEY);
     pNote('saved ' + y);
@@ -181,7 +184,10 @@ if (window.ResizeObserver) {
       // 内容重排中（骤降 = 列表被清空/筛掉，浏览器当场截断 scrollY 并照常派 scroll 事件）：
       // 这段时间的 scrollY 不是用户读到的位置，一律不许落盘。高度回来了立刻解除，
       // 这样「新那天内容真的更短」时用户的正常滚动照样存得进去。
-      if (pLastDocH && sh < pLastDocH * 0.6) { pShrinkUntil = Date.now() + 3000; pShrinkFrom = pLastDocH; }
+      if (pLastDocH && sh < pLastDocH * 0.6) {
+        pShrinkUntil = Date.now() + 3000; pShrinkFrom = pLastDocH;
+        pShrinkY = window.scrollY || window.pageYOffset || 0;   // 缩水前停在哪
+      }
       else if (pShrinkFrom && sh >= pShrinkFrom * 0.8) { pShrinkUntil = 0; pShrinkFrom = 0; }
       pLastDocH = sh;
       pTryRestore('resize-observer');
