@@ -97,57 +97,133 @@ const id = params.get('id');
 // 全内容高度，所以 OUTER document 才是真正可滚动的；iframe 内部的 window.scroll
 // 事件根本不会触发——bridge 里的 saveScroll 是僵尸代码（保留兼容旧 srcdoc）。
 // 这里在 PARENT 加 listener，按 id 分 key，保证 PWA/X5/iOS Safari 切回不丢位置。
+//
+// 0729 重写（owner 报「归档页不回到阅读位置了」，实测复现存档被冲成 1156）：
+//  ① 存档只认**真实手势**（touch/wheel/键盘）。老实现一恢复完就开放保存闸，
+//     图片懒加载失败 / 折叠复位 / WebView 回收 tile 让页面变矮时，浏览器当场截断
+//     scrollY 并照常派 scroll 事件 → 把好位置冲成一个小值写回 localStorage。
+//     用户根本没碰屏幕，存档却被污染，而且**下次打开只会恢复到那个小值** = 永久失效。
+//  ② 恢复由**高度变化**驱动（ResizeObserver + resize 桥），不再是固定 40×200ms 轮询。
+//     归档页高度随天数单调增长，固定预算迟早不够，用尽后内容再变高也不会补救。
+//  ③ 关掉浏览器原生 scrollRestoration：内容是异步 fetch + srcdoc 注入的，
+//     原生恢复只会滚到一个内容还没到位的错位置，还会跟我们抢方向盘。
+//  ④ ?debug=scroll 自检面板：手机上没法 attach 调试器，出问题必须能当场看出
+//     是「没存住」还是「存了没恢复」。
 var SCROLL_KEY = 'scroll_render_' + (id || 'unknown');
-var pScrollRestoring = true;
-var pScrollSaveTimer = null;
+var DEBUG_SCROLL = params.get('debug') === 'scroll';
+var pTarget = 0;            // >0 = 守着存档：既欠一次恢复，也不许被 layout shift 冲掉
+var pUserTouched = false;   // 真实手势才算「用户接管」，此后才允许写存档
+var pSaveTimer = null, pTries = 0, pLastNote = '';
+// 内容几乎铺满整个 iframe，用户的 touch/wheel 落在**跨域 iframe 内**、冒泡不到 parent，
+// 所以手势信号由 bridge 转发（下方 {type:'gesture'}）。这里再加一道不依赖 iframe 配合的
+// 兜底：页面刚缩水的一瞬间，浏览器截断 scrollY 派出的 scroll 事件一律不落盘。
+var pLastDocH = 0, pShrinkUntil = 0, pShrinkFrom = 0;
+
+try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch(_) {}
+
+function pNote(s) { pLastNote = s; pDbgRender(); }
+
 function pFlushScroll() {
-  if (pScrollRestoring) return;
-  if (pScrollSaveTimer) { clearTimeout(pScrollSaveTimer); pScrollSaveTimer = null; }
+  if (pTarget > 0 && !pUserTouched) return;   // 守护期：任何非手势滚动都不落盘
+  if (Date.now() < pShrinkUntil) { pNote('shrink guard'); return; }
+  if (pSaveTimer) { clearTimeout(pSaveTimer); pSaveTimer = null; }
   try {
     var y = window.scrollY || window.pageYOffset || 0;
     if (y > 0) localStorage.setItem(SCROLL_KEY, String(y));
     else localStorage.removeItem(SCROLL_KEY);
-  } catch(_) {}
+    pNote('saved ' + y);
+  } catch(err) { pNote('SAVE FAILED: ' + err); }   // 配额爆了/隐私模式要看得见，别静默吞
 }
 function pSaveScroll() {
-  if (pScrollRestoring) return;
-  if (pScrollSaveTimer) clearTimeout(pScrollSaveTimer);
-  pScrollSaveTimer = setTimeout(pFlushScroll, 400);
+  if (pTarget > 0 && !pUserTouched) { pDbgRender(); return; }
+  if (pSaveTimer) clearTimeout(pSaveTimer);
+  pSaveTimer = setTimeout(pFlushScroll, 400);
 }
+function pUserGesture() {
+  if (pUserTouched) return;
+  pUserTouched = true; pTarget = 0; pNote('user took over');
+  // 手势是从 iframe 经 postMessage **异步**到的，本次滚动派出的 scroll 事件
+  // 早在守护期里被挡掉了；滚动停下后不会再有 scroll 事件，得自己补一次落盘，
+  // 否则用户滚到哪都存不进去（保存闸看着像焊死）。
+  pSaveScroll();
+}
+['touchstart', 'pointerdown', 'mousedown', 'wheel', 'keydown'].forEach(function(ev) {
+  window.addEventListener(ev, pUserGesture, { passive: true, capture: true });
+});
 window.addEventListener('scroll', pSaveScroll, { passive: true });
-// freeze 前最后一次机会
-window.addEventListener('pagehide', pFlushScroll);
+window.addEventListener('pagehide', pFlushScroll);   // freeze 前最后一次机会
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'hidden') pFlushScroll();
 });
 
-function pRestoreScroll() {
-  var y = 0;
-  try { y = parseInt(localStorage.getItem(SCROLL_KEY) || '0', 10) || 0; } catch(_) {}
-  if (y <= 0) { pScrollRestoring = false; return; }
-  var tries = 0;
-  function tryIt() {
-    tries++;
-    // 必须等 iframe.style.height 已被 resize bridge 设大；否则 document 高度不够 scrollTo 截到顶
-    var sh = document.documentElement.scrollHeight;
-    if (sh < y + 100 && tries < 40) { setTimeout(tryIt, 200); return; }
-    window.scrollTo(0, y);
-    var actual = window.scrollY || window.pageYOffset || 0;
-    if (Math.abs(actual - y) > 10 && tries < 40) setTimeout(tryIt, 200);
-    else pScrollRestoring = false;
-  }
-  // 等 srcdoc 渲染 + bridge resize 一波；800ms 起步更稳（render.html 测试 iframe 800ms 才高度到位）
-  setTimeout(tryIt, 800);
+function pTryRestore(why) {
+  if (!pTarget || pUserTouched) return;
+  var sh = document.documentElement.scrollHeight;
+  var need = pTarget + Math.min(window.innerHeight || 600, 200);
+  if (sh < need) { pNote('wait height ' + sh + '/' + need + ' (' + why + ')'); return; }
+  pTries++;
+  window.scrollTo(0, pTarget);
+  var actual = window.scrollY || window.pageYOffset || 0;
+  pNote((Math.abs(actual - pTarget) <= 2 ? 'restored ' : 'partial ') + actual + '/' + pTarget
+        + ' t' + pTries + ' (' + why + ')');
 }
-// load 时 iframe 可能还没回 resize，pRestoreScroll 自己重试到高度够
-window.addEventListener('load', function() { setTimeout(pRestoreScroll, 100); });
-// bfcache 回来（iOS Safari / 安卓 Chrome 后台不 reload 走这里）
+function pBeginRestore(why) {
+  if (pUserTouched) return;
+  try { pTarget = parseInt(localStorage.getItem(SCROLL_KEY) || '0', 10) || 0; } catch(_) { pTarget = 0; }
+  if (pTarget <= 0) { pNote('no saved position'); return; }
+  pTryRestore(why);
+}
+// 高度变化是唯一可靠的「内容到位」信号：异步 fetch → 渲染 → 图片回填，每一步都可能改高度
+if (window.ResizeObserver) {
+  try {
+    new ResizeObserver(function() {
+      var sh = document.documentElement.scrollHeight;
+      // 内容重排中（骤降 = 列表被清空/筛掉，浏览器当场截断 scrollY 并照常派 scroll 事件）：
+      // 这段时间的 scrollY 不是用户读到的位置，一律不许落盘。高度回来了立刻解除，
+      // 这样「新那天内容真的更短」时用户的正常滚动照样存得进去。
+      if (pLastDocH && sh < pLastDocH * 0.6) { pShrinkUntil = Date.now() + 3000; pShrinkFrom = pLastDocH; }
+      else if (pShrinkFrom && sh >= pShrinkFrom * 0.8) { pShrinkUntil = 0; pShrinkFrom = 0; }
+      pLastDocH = sh;
+      pTryRestore('resize-observer');
+    }).observe(document.documentElement);
+  } catch(_) {}
+}
+window.addEventListener('load', function() { pBeginRestore('load'); });
+document.addEventListener('DOMContentLoaded', function() { pBeginRestore('domready'); });
+// 兜底：某些 WebView 的 RO 对 documentElement 不回调；30 秒内低频补几拍，之后放行保存闸
+//（手势事件万一全都缺失，不能让位置永远存不进去）
+var pTick = setInterval(function() { pTryRestore('tick'); }, 700);
+setTimeout(function() {
+  clearInterval(pTick);
+  if (!pUserTouched) { pTarget = 0; pNote('guard released (30s)'); }
+}, 30000);
+// bfcache 回来（iOS Safari / 安卓 Chrome 后台不 reload 走这里）：DOM 还在但 scrollY 可能被 snap 到 0
 window.addEventListener('pageshow', function(e) {
-  if (e.persisted) {
-    pScrollRestoring = true;
-    setTimeout(pRestoreScroll, 50);
-  }
+  if (e.persisted) { pUserTouched = false; pTries = 0; pBeginRestore('bfcache'); }
 });
+
+// ?debug=scroll：手机上一眼看出是没存住还是没恢复
+function pDbgRender() {
+  if (!DEBUG_SCROLL) return;
+  var box = document.getElementById('p-dbg');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'p-dbg';
+    box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;'
+      + 'background:rgba(0,0,0,.86);color:#7CFC9A;font:11px/1.5 ui-monospace,Menlo,monospace;'
+      + 'padding:8px 10px;border:1px solid #2b7;border-radius:8px;white-space:pre-wrap;'
+      + 'pointer-events:none';
+    document.body.appendChild(box);
+  }
+  var stored = '(读不到)';
+  try { stored = localStorage.getItem(SCROLL_KEY); } catch(err) { stored = 'ERR ' + err; }
+  box.textContent = 'key ' + SCROLL_KEY
+    + '\n存档 ' + stored + '   当前 y ' + Math.round(window.scrollY || 0)
+    + '   docH ' + document.documentElement.scrollHeight
+    + '\n守护 ' + (pTarget > 0 ? 'ON→' + pTarget : 'off')
+    + '   用户已接管 ' + pUserTouched + '   ' + pLastNote;
+}
+if (DEBUG_SCROLL) { setInterval(pDbgRender, 500); }
 
 // 桥接：iframe 因 sandbox 无 same-origin / top-navigation，走 postMessage
 window.addEventListener('message', function(e) {
@@ -156,6 +232,11 @@ window.addEventListener('message', function(e) {
   var d = e.data || {};
   if (d.type === 'resize' && typeof d.height === 'number' && d.height > 100 && d.height < 100000) {
     frame.style.height = d.height + 'px';
+    pTryRestore('bridge-resize');       // 高度刚到位，是恢复的最佳时机
+  } else if (d.type === 'gesture') {
+    // 用户的 touch/wheel 落在跨域 iframe 里、冒泡不到 parent，只能靠 bridge 转发。
+    // 收到 = 用户真的接管了滚动，此后才允许写存档（见上方守护期说明）。
+    pUserGesture();
   } else if (d.type === 'navigate' && typeof d.url === 'string') {
     // 简单 URL 校验：必须是绝对 http(s) 链接，禁 javascript: / data: 等
     if (/^https?:\/\//i.test(d.url)) {
@@ -268,7 +349,7 @@ async function loadPage(attempt) {
     // 全部走 postMessage:
     //   - {type:'navigate', url}: outer 校验同站后用 top.location 跳转
     //   - {type:'resize', height}: outer 调 iframe.style.height 自适应
-    var bridgeScript = "<script>(function(){var PID=" + JSON.stringify(id || 'unknown') + ";var SK='scroll_'+PID;function send(m){try{parent.postMessage(m,'*')}catch(e){}}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(a){var u=a.href;if(u){e.preventDefault();send({type:'navigate',url:u})}}},true);function reportH(){var h=Math.max(document.documentElement.scrollHeight||0,document.body?document.body.scrollHeight:0);if(h>100)send({type:'resize',height:h})}window.addEventListener('load',reportH);if(window.MutationObserver){var ob=new MutationObserver(reportH);document.addEventListener('DOMContentLoaded',function(){ob.observe(document.documentElement,{childList:true,subtree:true,attributes:true})})}setInterval(reportH,1500);var stt=null;function saveScroll(){if(stt)clearTimeout(stt);stt=setTimeout(function(){var y=window.scrollY||window.pageYOffset||0;send({type:'setStorage',key:SK,value:String(y)})},400)}window.addEventListener('scroll',saveScroll,{passive:true});window.addEventListener('message',function(e){var d=e.data||{};if(d.type==='storage'&&d.key===SK&&d.value){var y=parseInt(d.value,10);if(!isNaN(y)&&y>0){var tries=0;function tryScroll(){tries++;window.scrollTo(0,y);var actual=window.scrollY||window.pageYOffset||0;if(Math.abs(actual-y)>10&&tries<20){setTimeout(tryScroll,150)}}setTimeout(tryScroll,200)}}});window.addEventListener('load',function(){setTimeout(function(){send({type:'getStorage',key:SK})},100)})})();<\/script>";
+    var bridgeScript = "<script>(function(){var PID=" + JSON.stringify(id || 'unknown') + ";var SK='scroll_'+PID;function send(m){try{parent.postMessage(m,'*')}catch(e){}}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(a){var u=a.href;if(u){e.preventDefault();send({type:'navigate',url:u})}}},true);function reportH(){var h=Math.max(document.documentElement.scrollHeight||0,document.body?document.body.scrollHeight:0);if(h>100)send({type:'resize',height:h})}window.addEventListener('load',reportH);if(window.MutationObserver){var ob=new MutationObserver(reportH);document.addEventListener('DOMContentLoaded',function(){ob.observe(document.documentElement,{childList:true,subtree:true,attributes:true})})}setInterval(reportH,1500);['touchstart','wheel','keydown','pointerdown'].forEach(function(ev){window.addEventListener(ev,function(){send({type:'gesture'})},{passive:true,capture:true})});var stt=null;function saveScroll(){if(stt)clearTimeout(stt);stt=setTimeout(function(){var y=window.scrollY||window.pageYOffset||0;send({type:'setStorage',key:SK,value:String(y)})},400)}window.addEventListener('scroll',saveScroll,{passive:true});window.addEventListener('message',function(e){var d=e.data||{};if(d.type==='storage'&&d.key===SK&&d.value){var y=parseInt(d.value,10);if(!isNaN(y)&&y>0){var tries=0;function tryScroll(){tries++;window.scrollTo(0,y);var actual=window.scrollY||window.pageYOffset||0;if(Math.abs(actual-y)>10&&tries<20){setTimeout(tryScroll,150)}}setTimeout(tryScroll,200)}}});window.addEventListener('load',function(){setTimeout(function(){send({type:'getStorage',key:SK})},100)})})();<\/script>";
     if (html.indexOf('</body>') !== -1) {
       html = html.replace('</body>', bridgeScript + '</body>');
     } else {
