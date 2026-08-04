@@ -264,6 +264,22 @@ window.addEventListener('message', function(e) {
       // 用 replaceState 不进 history（owner 反复点不堆栈）
       history.replaceState(null, '', location.pathname + location.search + newHash);
     } catch(err) {}
+  } else if (d.type === 'scrollTo' && typeof d.y === 'number' && d.y >= 0) {
+    // 内容页请 parent 代滚（深链跳转 / 页内目录 / 回到顶部）。
+    // 为什么内容页自己滚不了：iframe 用 sandbox 且 height 被设成**全内容高度**，
+    // iframe 内部根本没有可滚动的视口，window.scrollTo 在里面是空操作——
+    // 真正在滚的一直是 OUTER document。iframe top=0，所以内容页元素的 offsetTop
+    // 直接就是 parent 该滚到的 y，不用换算。
+    // 复用 pTarget 那套守护：高度还没撑够时 pTryRestore 会等 bridge-resize 再试，
+    // 不必在内容页里瞎轮询。pUserTouched 强制归零 = 深链优先于上次的阅读位置存档
+    // （用户明确点了某一节，就不该被"上回读到哪"拽回去）。
+    var ty = Math.max(0, Math.round(d.y));
+    if (ty === 0) {
+      // 回到顶部：pTryRestore 的 `!pTarget` 会把 0 当"没有目标"挡掉，直接滚。
+      pTarget = 0; pUserTouched = true; window.scrollTo(0, 0); pNote('deep-link top');
+    } else {
+      pTarget = ty; pUserTouched = false; pTries = 0; pTryRestore('deep-link');
+    }
   } else if (d.type === 'getStorage' && typeof d.key === 'string') {
     // sandboxed iframe 没 same-origin，自身 localStorage 抛 SecurityError；走 parent 代存
     try {
