@@ -237,7 +237,11 @@ window.addEventListener('message', function(e) {
   if (!frame || e.source !== frame.contentWindow) return;
   var d = e.data || {};
   if (d.type === 'resize' && typeof d.height === 'number' && d.height > 100 && d.height < 4000000) {
-    frame.style.height = d.height + 'px';
+    // 至少铺满一屏：iframe 严格按内容高度收缩时，内容一短就露出 parent 的深色底
+    // （0805 不知情视角实测：搜个没有的词，桌面下方 358px 纯黑占屏 40%，手机也黑 147px——
+    //  一本米白色调的书搜完半屏变黑，第一反应是「页面崩了」而不是「没搜到」）。
+    // 只垫下限不改上限：内容比一屏长时照常按内容走，不影响长页滚动与位置恢复。
+    frame.style.height = Math.max(d.height, window.innerHeight) + 'px';
     pTryRestore('bridge-resize');       // 高度刚到位，是恢复的最佳时机
   } else if (d.type === 'gesture') {
     // 用户的 touch/wheel 落在跨域 iframe 里、冒泡不到 parent，只能靠 bridge 转发。
