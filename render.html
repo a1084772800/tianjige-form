@@ -110,6 +110,7 @@ const id = params.get('id');
 //  ④ ?debug=scroll 自检面板：手机上没法 attach 调试器，出问题必须能当场看出
 //     是「没存住」还是「存了没恢复」。
 var SCROLL_KEY = 'scroll_render_' + (id || 'unknown');
+var STATE_KEY = 'state_render_' + (id || 'unknown');   // 页内状态（如搜索词），由 iframe 通过 bridge 代存
 var DEBUG_SCROLL = params.get('debug') === 'scroll';
 var pTarget = 0;            // >0 = 守着存档：既欠一次恢复，也不许被 layout shift 冲掉
 var pUserTouched = false;   // 真实手势才算「用户接管」，此后才允许写存档
@@ -260,6 +261,17 @@ window.addEventListener('message', function(e) {
   } else if (d.type === 'getHash') {
     // 沙箱 iframe 拿不到 parent.location.hash（cross-origin），走 postMessage 桥接
     try { e.source.postMessage({ type: 'hash', hash: location.hash || '' }, '*'); } catch(err) {}
+    // 顺带把上次的页内状态还给它。内层 iframe 是 sandbox 无 allow-same-origin，
+    // 自己碰 storage 会抛 SecurityError，只能由 parent 代存代取。
+    // 为什么必须做：只恢复滚动位置、不恢复内容状态 = 像素回到原处而内容已经变了
+    // （0805 实测：搜完点进正文再返回，搜索词被清空、页面从 1700px 弹回 8082px 全书目录，
+    //  而滚动停在搜索态那个 y，落在完全无关的地方）。位置对不对，取决于内容对不对。
+    try { e.source.postMessage({ type: 'restoreState', state: localStorage.getItem(STATE_KEY) || '' }, '*'); } catch(err) {}
+  } else if (d.type === 'saveState' && typeof d.state === 'string') {
+    try {
+      if (d.state) localStorage.setItem(STATE_KEY, d.state);
+      else localStorage.removeItem(STATE_KEY);
+    } catch(err) {}
   } else if (d.type === 'setHash' && typeof d.hash === 'string') {
     // iframe 内 token-status 编辑后回写 parent URL → owner 刷新仍持久
     try {
