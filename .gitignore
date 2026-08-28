@@ -10,6 +10,9 @@ assets/h800_fixed/
 # 临时文件
 *.tmp
 *.bak
+# 0828：*.bak 匹配不到 .bak_0713_sota 这种带后缀的（gitignore 不支持行尾注释，
+# 注释必须独占一行，否则整行连注释一起被当成模式，规则静默失效）
+*.bak_*
 .DS_Store
 __pycache__/
 *.pyc
