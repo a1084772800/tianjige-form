@@ -65,6 +65,36 @@ body {
   border: none;
   display: none;
 }
+/* ── 留言（0904）：页面右下角悬浮按钮 + 底部抽屉；父文档层，不进 sandbox iframe ── */
+#rc-fab { position: fixed; right: 16px; bottom: 18px; z-index: 99990; display: none;
+  padding: 10px 16px; border-radius: 999px; border: 1px solid rgba(246,211,101,.55);
+  background: rgba(20,20,20,.92); color: #f6d365; font-size: 14px; cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0,0,0,.45); }
+#rc-fab:active { opacity: .75; }
+#rc-panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 99991; display: none;
+  max-height: 72vh; background: #141414; color: #e8e0d0; border-top: 1px solid #333;
+  border-radius: 14px 14px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.5);
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+#rc-panel .rc-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid #262626; font-size: 15px; color: #f6d365; }
+#rc-panel .rc-close { background: none; border: none; color: #a09080; font-size: 20px; cursor: pointer; padding: 0 4px; }
+#rc-list { overflow-y: auto; max-height: 36vh; padding: 8px 16px; font-size: 14px; line-height: 1.5; }
+#rc-list .rc-item { padding: 8px 0; border-bottom: 1px dashed #2a2a2a; }
+#rc-list .rc-meta { color: #8a8070; font-size: 12px; margin-bottom: 2px; }
+#rc-list .rc-text { white-space: pre-wrap; word-break: break-word; }
+#rc-list .rc-reply { margin-top: 6px; padding: 8px 10px; background: rgba(246,211,101,.08);
+  border-left: 2px solid #f6d365; border-radius: 0 6px 6px 0; white-space: pre-wrap; word-break: break-word; }
+#rc-list .rc-reply b { color: #f6d365; }
+#rc-list .rc-empty { color: #8a8070; padding: 10px 0; }
+#rc-form { padding: 10px 16px 14px; border-top: 1px solid #262626; }
+#rc-form input, #rc-form textarea { width: 100%; background: #1d1d1d; color: #e8e0d0; border: 1px solid #333;
+  border-radius: 8px; padding: 9px 10px; font-size: 14px; font-family: inherit; }
+#rc-form textarea { min-height: 72px; resize: vertical; margin-top: 8px; }
+#rc-form .rc-row { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+#rc-form .rc-send { padding: 9px 18px; border-radius: 8px; border: 1px solid #f6d365; background: transparent;
+  color: #f6d365; font-size: 14px; cursor: pointer; }
+#rc-form .rc-send:disabled { opacity: .5; }
+#rc-form .rc-msg { color: #8a8070; font-size: 12px; flex: 1; }
 </style>
 </head>
 <body>
@@ -82,6 +112,17 @@ body {
 </div>
 
 <iframe id="render-frame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
+
+<button id="rc-fab" type="button">留言</button>
+<div id="rc-panel" role="dialog" aria-label="留言">
+  <div class="rc-head"><span>留言 · 回复会显示在这里</span><button class="rc-close" type="button" aria-label="关闭">×</button></div>
+  <div id="rc-list"><div class="rc-empty">加载中…</div></div>
+  <form id="rc-form">
+    <input id="rc-nick" maxlength="40" placeholder="怎么称呼您（可不填）">
+    <textarea id="rc-text" maxlength="2000" placeholder="想改哪里、有什么问题，直接写"></textarea>
+    <div class="rc-row"><span class="rc-msg" id="rc-msg"></span><button class="rc-send" type="submit">发送</button></div>
+  </form>
+</div>
 
 <script>
 const API = 'https://v609a76lof.sealoshzh.site';
@@ -320,6 +361,65 @@ window.addEventListener('hashchange', function() {
   }
 });
 
+// ── 留言区（0904 owner 点单「评论进 inbox」）──────────────────────────────
+// 留言 POST /render_comment → Laf 集合 → 本机 poller 投 inbox → 主线程回复 → /render_comments 回显。
+// 全在父文档层：sandbox iframe 碰不到 fetch 目标域也碰不到 localStorage，父层做正好。
+// 留言正文是外部输入：只用 textContent 渲染，永不 innerHTML。?comment=0 可隐藏入口。
+(function () {
+  if (!id || params.get('comment') === '0') return;
+  var fab = document.getElementById('rc-fab'), panel = document.getElementById('rc-panel');
+  var list = document.getElementById('rc-list'), form = document.getElementById('rc-form');
+  var nickEl = document.getElementById('rc-nick'), textEl = document.getElementById('rc-text');
+  var msgEl = document.getElementById('rc-msg'), sendBtn = form.querySelector('.rc-send');
+  var timer = null, lastHash = '';
+  try { nickEl.value = localStorage.getItem('rc_nick') || ''; } catch (_) {}
+  function fmt(ms) { var d = new Date(ms); function z(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getMonth() + 1 + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); }
+  function render(comments) {
+    var h = JSON.stringify(comments.map(function (c) { return [c.id, c.reply ? 1 : 0]; }));
+    if (h === lastHash) return; lastHash = h;
+    list.textContent = '';
+    if (!comments.length) { var e = document.createElement('div'); e.className = 'rc-empty'; e.textContent = '还没有留言，写第一条吧。'; list.appendChild(e); return; }
+    comments.forEach(function (c) {
+      var it = document.createElement('div'); it.className = 'rc-item';
+      var meta = document.createElement('div'); meta.className = 'rc-meta'; meta.textContent = (c.nick || '访客') + ' · ' + fmt(c.created_at);
+      var tx = document.createElement('div'); tx.className = 'rc-text'; tx.textContent = c.text || '';
+      it.appendChild(meta); it.appendChild(tx);
+      if (c.reply) { var rp = document.createElement('div'); rp.className = 'rc-reply'; var b = document.createElement('b'); b.textContent = '回复 · ' + fmt(c.replied_at) + '\n'; rp.appendChild(b); rp.appendChild(document.createTextNode(c.reply)); it.appendChild(rp); }
+      list.appendChild(it);
+    });
+    list.scrollTop = list.scrollHeight;
+  }
+  function load() {
+    return fetchWithTimeout(API + '/render_comments?id=' + encodeURIComponent(id), FETCH_TIMEOUT)
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.success) render(d.comments || []); })
+      .catch(function () { if (!list.children.length) { list.textContent = '留言区加载失败，稍后再试。'; } });
+  }
+  function open() { panel.style.display = 'block'; fab.style.display = 'none'; load(); timer = setInterval(load, 30000); setTimeout(function () { textEl.focus(); }, 50); }
+  function close() { panel.style.display = 'none'; fab.style.display = 'block'; if (timer) { clearInterval(timer); timer = null; } }
+  fab.addEventListener('click', open);
+  panel.querySelector('.rc-close').addEventListener('click', close);
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var text = (textEl.value || '').trim(), nick = (nickEl.value || '').trim();
+    if (!text) { msgEl.textContent = '写点内容再发。'; return; }
+    try { if (nick) localStorage.setItem('rc_nick', nick); } catch (_) {}
+    sendBtn.disabled = true; msgEl.textContent = '发送中…';
+    fetch(API + '/render_comment', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ render_id: id, text: text, nick: nick }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.success) { textEl.value = ''; msgEl.textContent = '已收到，回复会显示在上面。'; lastHash = ''; return load(); }
+        var m = { rate_limited: '留言太频繁了，过一会儿再试。', page_quota: '这页今天留言太多了，明天再来。', bad_text: '内容为空或太长（2000 字内）。', page_not_found: '页面不存在或已过期。' };
+        msgEl.textContent = m[d && d.error] || ('没发出去：' + ((d && d.error) || '未知错误'));
+      })
+      .catch(function () { msgEl.textContent = '网络不通，没发出去，稍后再试。'; })
+      .then(function () { sendBtn.disabled = false; });
+  });
+  window.rcShowFab = function () { if (panel.style.display !== 'block') fab.style.display = 'block'; };
+})();
+
 function showLoading(msg) {
   document.getElementById('loading').style.display = 'flex';
   document.getElementById('error').style.display = 'none';
@@ -399,6 +499,7 @@ async function loadPage(attempt) {
     frame.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'none';
+    if (window.rcShowFab) window.rcShowFab();
 
   } catch (e) {
     if (attempt < MAX_RETRIES) {
