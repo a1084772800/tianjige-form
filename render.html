@@ -364,9 +364,12 @@ window.addEventListener('hashchange', function() {
 // ── 留言区（0904 owner 点单「评论进 inbox」）──────────────────────────────
 // 留言 POST /render_comment → Laf 集合 → 本机 poller 投 inbox → 主线程回复 → /render_comments 回显。
 // 全在父文档层：sandbox iframe 碰不到 fetch 目标域也碰不到 localStorage，父层做正好。
-// 留言正文是外部输入：只用 textContent 渲染，永不 innerHTML。?comment=0 可隐藏入口。
+// 留言正文是外部输入：只用 textContent 渲染，永不 innerHTML。
+// 入口默认关闭（0906 owner 点单「把留言按钮隐藏」）：要在某一页开留言，URL 加 ?comment=1。
+// 关的只是入口——留言回路（Laf 集合 / render_comment_poll → inbox / 回显）原样保留，
+// 所以加参数即刻可用，不需要改这里也不需要重新发页面。
 (function () {
-  if (!id || params.get('comment') === '0') return;
+  if (!id || params.get('comment') !== '1') return;
   var fab = document.getElementById('rc-fab'), panel = document.getElementById('rc-panel');
   var list = document.getElementById('rc-list'), form = document.getElementById('rc-form');
   var nickEl = document.getElementById('rc-nick'), textEl = document.getElementById('rc-text');
