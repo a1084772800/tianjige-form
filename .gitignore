@@ -22,3 +22,14 @@ laf_monitor/__pycache__/
 
 # laf_monitor/ 留 local 维护（Laf 控制台 single source of truth + 含 secret 不入库）
 laf_monitor/
+
+# 0913：laf CLI（laf app init / func pull）在本目录生成的脚手架与线上函数副本。
+# 与 laf_monitor/ 同一理由：**Laf 控制台是 single source of truth，且这些副本含 secret**
+# —— functions/notes.ts 里就明文带着 NOTES_KEY，而本仓是 public repo，一旦提交即等于公开。
+# 本地留着照常 laf func push，就是不入库。
+functions/
+laf.yaml
+.app.yaml
+types/
+package.json
+tsconfig.json
