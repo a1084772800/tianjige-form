@@ -53,6 +53,13 @@ body {
   margin-bottom: 8px;
   font-weight: 500;
 }
+.form-hint {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #9a9082;
+}
+.form-hint b { color: #d4a844; font-weight: 600; }
 .form-input {
   width: 100%;
   padding: 12px 16px;
@@ -289,6 +296,9 @@ select option {
       <option value="戌时">戌时 (19:00-21:00)</option>
       <option value="亥时">亥时 (21:00-23:00)</option>
     </select>
+    <!-- 2026-09-13 B-03：表单收的是钟面时间，折算由引擎负责。本表单只到「时辰」粒度，
+         1986-1991 夏令时段需 -1 小时，两小时的时辰段一减仍落在同段内，那 6 年的人须自报确切钟点。 -->
+    <div class="form-hint">按出生证/身份证上写的<b>钟面时间</b>选，不用自己换算。1986–1991 年夏季出生的，那几年实行夏令时，请在下面问题栏补一句确切钟点（如「钟面 11:20」）。</div>
   </div>
 
   <div class="divider"></div>
