@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>想法台</title>
+<!-- 想法台 PWA 入口（1017 owner「把桌面推送也做了」）：装到桌面 + 开启推送；正文仍是 render.html 里那页，这里只是壳。 -->
+<link rel="manifest" href="idea.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="想法台">
+<link rel="apple-touch-icon" href="assets/idea/apple-touch-icon.png">
+<link rel="icon" href="assets/idea/icon-192.png">
+<meta name="theme-color" content="#1d4f9c">
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#f6f7f9;font:15px/1.5 -apple-system,"PingFang SC","Helvetica Neue",sans-serif;color:#1d1f23}
+#bar{position:fixed;left:0;right:0;top:0;z-index:5;background:#fff;border-bottom:1px solid #e4e6ea;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;display:flex;gap:10px;align-items:center}
+#bar .t{font-weight:600;white-space:nowrap}#st{flex:1 1 auto;min-width:0;font-size:13px;color:#555;overflow-wrap:anywhere}
+button{font:inherit;border:0;border-radius:999px;padding:7px 14px;background:#1d4f9c;color:#fff;white-space:nowrap}button[disabled]{opacity:.5}
+button.ghost{background:#eef1f5;color:#333}
+#wrap{position:fixed;left:0;right:0;bottom:0;top:calc(52px + env(safe-area-inset-top));overflow:auto;-webkit-overflow-scrolling:touch}
+#f{display:block;width:100%;height:100%;border:0;background:#f6f7f9}
+#help{display:none;position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-top:1px solid #e4e6ea;padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,.08)}
+#help h3{margin:0 0 6px;font-size:16px}#help ol{margin:6px 0 10px;padding-left:20px}#help li{margin:3px 0}
+.code{font-size:28px;font-weight:700;letter-spacing:4px;color:#1d4f9c}
+</style>
+</head>
+<body>
+<div id="bar"><span class="t">想法台</span><span id="st">…</span><button id="btn" style="display:none">开启推送</button></div>
+<div id="wrap"><iframe id="f" title="想法台" src="render.html?id=idea-12f44cee3d537adce0e0"></iframe></div>
+<div id="help"><h3 id="help-title"></h3><div id="help-body"></div><button class="ghost" id="help-close">知道了</button></div>
+<script>
+(function () {
+  var LAF = 'https://v609a76lof.sealoshzh.site';
+  // VAPID 公钥（公开的那一半；私钥只在本机 ~/.config/idea_console/）。换钥匙要同步改这里。
+  var VAPID_PUBLIC = 'BCblwCPtlIicG4QNX0Ox1_d-tEIGZhTjQOGG4WEBHbTBBBS9B-NilBkLygams4Qu1H4L0-BbHK527LvfPkjHiQo';
+  var st = document.getElementById('st'), btn = document.getElementById('btn');
+  var help = document.getElementById('help'), helpTitle = document.getElementById('help-title'), helpBody = document.getElementById('help-body');
+  document.getElementById('help-close').onclick = function () { help.style.display = 'none'; };
+  function showHelp(t, html) { helpTitle.textContent = t; helpBody.innerHTML = html; help.style.display = 'block'; }
+
+  // token：批准群链接带 #token=…（或 ?t=…）→ 存本地，之后静默带上。装到桌面的 web app 存储独立，拿不到就走配对码。
+  var m = /[#&?]token=([^&]+)/.exec(location.hash) || /[?&]t=([^&]+)/.exec(location.search);
+  if (m) { try { localStorage.setItem('idea_push_token', decodeURIComponent(m[1])); } catch (_) {} history.replaceState(null, '', location.pathname + (location.search.indexOf('pwa=1') >= 0 ? '?pwa=1' : '')); }
+  var token = ''; try { token = localStorage.getItem('idea_push_token') || ''; } catch (_) {}
+
+  var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  var supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+  function b64ToU8(s) { var p = '='.repeat((4 - s.length % 4) % 4); var b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); var a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+
+  function setState(text, buttonLabel) {
+    st.textContent = text;
+    if (buttonLabel) { btn.textContent = buttonLabel; btn.style.display = ''; } else { btn.style.display = 'none'; }
+  }
+
+  function installHelp() {
+    showHelp('先装到桌面，再开推送', isIOS
+      ? '<ol><li>点 Safari 底部的「分享」按钮</li><li>选「添加到主屏幕」</li><li>从桌面图标打开想法台，再点「开启推送」</li></ol><div style="color:#777;font-size:13px">iPhone 要 iOS 16.4 以上，且必须从桌面图标打开才有通知权限。</div>'
+      : '<ol><li>浏览器地址栏右侧「安装」图标，或菜单里「安装想法台」</li><li>装好后点「开启推送」</li></ol>');
+  }
+
+  async function subscribe() {
+    btn.disabled = true;
+    try {
+      var reg = await navigator.serviceWorker.register('sw.js');
+      await navigator.serviceWorker.ready;
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setState('通知权限没给。去系统设置里允许「想法台」通知，再回来点一次。', '开启推送'); return; }
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
+      var headers = { 'Content-Type': 'application/json' };
+      if (token) headers['X-Answer-Token'] = token;
+      var r = await fetch(LAF + '/push-subscribe', { method: 'POST', headers: headers,
+        body: JSON.stringify({ subscription: sub.toJSON(), ua: navigator.userAgent, label: 'idea' }) });
+      var j = await r.json();
+      if (j.error) { setState('登记失败：' + j.error, '重试'); return; }
+      if (j.status === 'active') {
+        try { localStorage.setItem('idea_push_state', 'active'); } catch (_) {}
+        setState('推送已开启。每天的推荐会弹到通知栏。', '关闭推送');
+      } else {
+        try { localStorage.setItem('idea_push_state', 'pending:' + j.code); } catch (_) {}
+        setState('差一步：把配对码发给 @龙虾owner', '看配对码');
+        showHelp('配对码', '<div class="code">' + j.code + '</div><div>在微信里 @龙虾owner 发一句：<b>推送码 ' + j.code + '</b></div><div style="color:#777;font-size:13px;margin-top:6px">收到后这台设备就开始收推送，第一条是测试通知。</div>');
+      }
+    } catch (e) {
+      setState('开启失败：' + (e && e.message ? e.message : e), '重试');
+    } finally { btn.disabled = false; }
+  }
+
+  async function unsubscribe() {
+    btn.disabled = true;
+    try {
+      var reg = await navigator.serviceWorker.getRegistration('sw.js');
+      var sub = reg && await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch(LAF + '/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'unsubscribe', subscription: sub.toJSON() }) });
+        await sub.unsubscribe();
+      }
+      try { localStorage.removeItem('idea_push_state'); } catch (_) {}
+      setState('推送已关闭。', '开启推送');
+    } catch (e) { setState('关闭失败：' + (e && e.message ? e.message : e), '关闭推送'); }
+    finally { btn.disabled = false; }
+  }
+
+  async function init() {
+    if (!supported) {
+      if (isIOS && !standalone) { setState('要收通知，先装到桌面。', '怎么装'); btn.onclick = installHelp; }
+      else { setState('这个浏览器不支持网页通知。'); }
+      return;
+    }
+    var saved = ''; try { saved = localStorage.getItem('idea_push_state') || ''; } catch (_) {}
+    var reg = await navigator.serviceWorker.getRegistration('sw.js');
+    var sub = reg && await reg.pushManager.getSubscription();
+    if (sub && saved === 'active' && Notification.permission === 'granted') {
+      setState('推送已开启。', '关闭推送'); btn.onclick = unsubscribe; return;
+    }
+    if (sub && saved.indexOf('pending:') === 0) {
+      var code = saved.slice(8);
+      setState('差一步：把配对码发给 @龙虾owner', '看配对码');
+      btn.onclick = function () { showHelp('配对码', '<div class="code">' + code + '</div><div>在微信里 @龙虾owner 发一句：<b>推送码 ' + code + '</b></div>'); };
+      return;
+    }
+    if (isIOS && !standalone) { setState('要收通知，先装到桌面。', '怎么装'); btn.onclick = installHelp; return; }
+    setState(Notification.permission === 'denied' ? '通知被拒绝过。系统设置里允许「想法台」通知后再点。' : '推荐可以直接弹到通知栏。', '开启推送');
+    btn.onclick = subscribe;
+  }
+  init();
+})();
+</script>
+</body>
+</html>
