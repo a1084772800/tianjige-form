@@ -1,6 +1,6 @@
-/* 想法台 service worker（1017 v2）：收推送弹通知 + 角标、点通知开页面、缓存壳与上一份数据包（离线能开）。
+/* 想法台 service worker（1017 v3）：收推送弹通知 + 角标、点通知开页面、缓存壳与上一份数据包（离线能开）。
    scope 是 /tianjige-form/（render.html 也在里面）：fetch 只接管下面点名的几个地址，其余一律不 respondWith，对别的页面零影响。 */
-var VERSION = 'idea-v2';
+var VERSION = 'idea-v3';
 var SHELL = ['./idea.html', './idea.webmanifest', './assets/idea/icon-192.png', './assets/idea/icon-512.png', './assets/idea/apple-touch-icon.png'];
 var DATA_HOST = 'v609a76lof.sealoshzh.site';
 var DATA_PATH = '/get_render';
@@ -20,12 +20,13 @@ self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
   var url; try { url = new URL(e.request.url); } catch (_) { return; }
   if (!isShell(url) && !isData(url)) return;      // 别的地址不碰
+  var key = isShell(url) ? url.origin + url.pathname : e.request;   // 壳按干净路径存：?pwa=1 / #token= 不进缓存键
   var net = fetch(e.request).then(function (res) {
-    if (res && res.ok) { var copy = res.clone(); caches.open(VERSION).then(function (c) { c.put(e.request, copy); }); }
+    if (res && res.ok) { var copy = res.clone(); caches.open(VERSION).then(function (c) { c.put(key, copy); }); }
     return res;
   });
-  if (isShell(url)) {   // 壳：有缓存先秒出，后台拿新版下次用；没缓存等网络
-    e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
+  if (isShell(url)) {   // 壳：有缓存先秒出，后台拿新版下次用（改壳必升 VERSION）；没缓存等网络
+    e.respondWith(caches.match(key).then(function (hit) {
       var fallback = net.catch(function () { return hit || Response.error(); });
       if (hit) { e.waitUntil(fallback); return hit; }
       return fallback;

@@ -163,9 +163,9 @@ section{display:none}section[data-active]{display:block}
     var local = ls.get('idea_decided_' + r.id);
     var lv = r.decision_id && live[r.decision_id];
     if (r.status !== '待拍板') return { status: r.status, by: r.by, pendingSync: false };
+    if (local) return { status: local, by: '这里', pendingSync: true };
     if (lv && lv.status === 'answered' && lv.chosen) return { status: lv.chosen, by: '控制台', pendingSync: true };
     if (lv && lv.status === 'expired') return { status: '放着', by: '3 天未表态', pendingSync: true };
-    if (local) return { status: local, by: '这里', pendingSync: true };
     return { status: '待拍板', pendingSync: false };
   }
   function recoCard(r, full) {
