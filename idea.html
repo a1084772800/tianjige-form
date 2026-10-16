@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>想法台</title>
-<!-- 想法台 PWA 入口（1017 owner「把桌面推送也做了」）：装到桌面 + 开启推送；正文仍是 render.html 里那页，这里只是壳。 -->
+<!-- 想法台 app 壳（1017）。数据包由本机 idea_console.py render 发到 Laf（ideadata-… id），这里客户端渲染；
+     推荐卡上直接点 做/不做/放着（decision-answer，令牌来自批准群链接或配对后的 status）；离线用 sw.js 缓存的上一份。 -->
 <link rel="manifest" href="idea.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,123 +13,336 @@
 <meta name="apple-mobile-web-app-title" content="想法台">
 <link rel="apple-touch-icon" href="assets/idea/apple-touch-icon.png">
 <link rel="icon" href="assets/idea/icon-192.png">
-<meta name="theme-color" content="#1d4f9c">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)">
 <style>
-*{box-sizing:border-box}html,body{margin:0;height:100%;background:#f6f7f9;font:15px/1.5 -apple-system,"PingFang SC","Helvetica Neue",sans-serif;color:#1d1f23}
-#bar{position:fixed;left:0;right:0;top:0;z-index:5;background:#fff;border-bottom:1px solid #e4e6ea;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;display:flex;gap:10px;align-items:center}
-#bar .t{font-weight:600;white-space:nowrap}#st{flex:1 1 auto;min-width:0;font-size:13px;color:#555;overflow-wrap:anywhere}
-button{font:inherit;border:0;border-radius:999px;padding:7px 14px;background:#1d4f9c;color:#fff;white-space:nowrap}button[disabled]{opacity:.5}
-button.ghost{background:#eef1f5;color:#333}
-#wrap{position:fixed;left:0;right:0;bottom:0;top:calc(52px + env(safe-area-inset-top));overflow:auto;-webkit-overflow-scrolling:touch}
-#f{display:block;width:100%;height:100%;border:0;background:#f6f7f9}
-#help{display:none;position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-top:1px solid #e4e6ea;padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,.08)}
-#help h3{margin:0 0 6px;font-size:16px}#help ol{margin:6px 0 10px;padding-left:20px}#help li{margin:3px 0}
-.code{font-size:28px;font-weight:700;letter-spacing:4px;color:#1d4f9c}
+:root{--bg:#f6f7f9;--card:#fff;--line:#e4e6ea;--fg:#1d1f23;--muted:#6b7280;--soft:#eef1f5;--acc:#1d4f9c;--ok:#1f7a3f;--okbg:#eafaf0;--warn:#8a6a00;--warnbg:#fff7d6;--fix:#a4541a;--fixbg:#fff1e6;--ext:#1d4f9c;--extbg:#e8f1ff;--new:#1f7a3f;--newbg:#eafaf0;--no:#666;--nobg:#f0f0f0;--shadow:0 1px 2px rgba(0,0,0,.04)}
+@media (prefers-color-scheme: dark){:root{--bg:#111318;--card:#1b1e26;--line:#2a2f3a;--fg:#e7e9ee;--muted:#9aa3b2;--soft:#262b36;--acc:#8fb4ff;--ok:#7bd49a;--okbg:#17301f;--warn:#e5c45a;--warnbg:#33290c;--fix:#f0a56e;--fixbg:#3a2415;--ext:#8fb4ff;--extbg:#1b2a44;--new:#7bd49a;--newbg:#17301f;--no:#aab;--nobg:#262b36;--shadow:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+body{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);padding:calc(10px + env(safe-area-inset-top)) 14px 0;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:10px;min-height:40px}
+.top h1{font-size:22px;margin:0;letter-spacing:.5px}
+.top .meta{flex:1 1 auto;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{border:0;background:var(--soft);color:var(--fg);border-radius:999px;min-width:40px;height:34px;padding:0 12px;font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.ib:active{transform:scale(.96)}
+.dot{width:8px;height:8px;border-radius:50%;background:#bbb}.dot.on{background:var(--ok)}.dot.pend{background:var(--warn)}
+nav{display:flex;gap:4px;margin:10px -4px 0;overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{flex:0 0 auto;border:0;background:transparent;color:var(--muted);font:inherit;font-size:15px;padding:8px 12px 10px;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px}
+nav button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--fg);font-weight:600}
+.n{font-size:11px;background:var(--acc);color:#fff;border-radius:999px;padding:0 6px;min-width:18px;text-align:center;line-height:18px}
+.n.zero{background:var(--soft);color:var(--muted)}
+main{max-width:720px;margin:0 auto;padding:12px 12px 0}
+section{display:none}section[data-active]{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;box-shadow:var(--shadow);overflow-wrap:anywhere;word-break:break-word;line-break:anywhere}
+.card.hl{outline:2px solid var(--acc);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.b{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--soft);color:var(--fg);white-space:nowrap}
+.b.k修{background:var(--fixbg);color:var(--fix)}.b.k延伸{background:var(--extbg);color:var(--ext)}.b.k新想法{background:var(--newbg);color:var(--new)}
+.b.s待拍板{background:var(--warnbg);color:var(--warn)}.b.s执行中,.b.s做{background:var(--extbg);color:var(--ext)}.b.s已落成{background:var(--okbg);color:var(--ok)}.b.s不做,.b.s放着{background:var(--nobg);color:var(--no)}
+.t{font-size:17px;font-weight:600;margin:8px 0 6px;line-height:1.4}
+.kv{display:grid;grid-template-columns:52px 1fr;gap:4px 10px;font-size:15px;margin-top:6px}.kv .k{color:var(--muted);font-size:13px;padding-top:2px}
+.more{border:0;background:transparent;color:var(--acc);font:inherit;font-size:14px;padding:6px 0 0}
+.acts{display:flex;gap:8px;margin-top:12px}
+.acts button{flex:1 1 0;border:0;border-radius:12px;min-height:46px;font:inherit;font-size:16px;font-weight:600;transition:transform .08s}
+.acts button:active{transform:scale(.97)}
+.acts .do{background:var(--acc);color:#fff}.acts .hold{background:var(--soft);color:var(--fg)}.acts .no{background:var(--nobg);color:var(--no)}
+.acts button.confirm{outline:2px solid var(--fg);outline-offset:-2px}
+.acts button[disabled]{opacity:.5}
+.decided{font-size:14px;color:var(--muted);margin-top:8px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.row{display:flex;gap:8px;align-items:flex-start}.row>.k{flex:0 0 40px;color:var(--muted);font-size:13px;padding-top:2px}.row>.v{flex:1 1 auto;min-width:0}
+.clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}.clamp.c3{-webkit-line-clamp:3}.clamp.c2{-webkit-line-clamp:2}.open .clamp{display:block;-webkit-line-clamp:unset}
+.day{position:sticky;top:var(--hh,100px);z-index:5;background:var(--bg);padding:10px 2px 4px;font-size:13px;color:var(--muted);font-weight:600}
+.idea{border-left:3px solid var(--line);padding-left:10px;margin:10px 0 14px}
+.idea .what{font-weight:600;margin:3px 0}
+.search{width:100%;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px;margin:4px 0 2px}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.sk{height:14px;border-radius:7px;background:linear-gradient(90deg,var(--soft) 25%,var(--card) 50%,var(--soft) 75%);background-size:200% 100%;animation:sh 1.2s infinite;margin:8px 0}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.banner{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:var(--warnbg);color:var(--warn);font-size:13px;display:none}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:all .2s;pointer-events:none;z-index:20;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.12);display:none;max-height:80vh;overflow:auto}
+.sheet.show{display:block}.sheet h3{margin:0 0 8px;font-size:17px}.sheet ol{padding-left:20px;margin:6px 0 10px}.sheet li{margin:4px 0}
+.code{font-size:30px;font-weight:700;letter-spacing:5px;color:var(--acc);margin:6px 0}
+.ptr{height:0;overflow:hidden;text-align:center;color:var(--muted);font-size:13px;transition:height .15s}
+.sig .kv{grid-template-columns:92px 1fr}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<div id="bar"><span class="t">想法台</span><span id="st">…</span><button id="btn" style="display:none">开启推送</button></div>
-<div id="wrap"><iframe id="f" title="想法台" src="render.html?id=idea-12f44cee3d537adce0e0"></iframe></div>
-<div id="help"><h3 id="help-title"></h3><div id="help-body"></div><button class="ghost" id="help-close">知道了</button></div>
+<header>
+  <div class="top"><h1>想法台</h1><span class="meta" id="meta">加载中…</span>
+    <button class="ib" id="pushbtn" title="推送"><span class="dot" id="pushdot"></span><span id="pushlbl">推送</span></button>
+    <button class="ib" id="refresh" title="刷新" aria-label="刷新">↻</button></div>
+  <nav role="tablist">
+    <button role="tab" data-tab="reco" aria-selected="true">推荐 <span class="n zero" id="n-reco">0</span></button>
+    <button role="tab" data-tab="gap">缝隙 <span class="n zero" id="n-gap">0</span></button>
+    <button role="tab" data-tab="idea">想法账 <span class="n zero" id="n-idea">0</span></button>
+    <button role="tab" data-tab="sig">信号</button>
+  </nav>
+</header>
+<div class="ptr" id="ptr">下拉刷新</div>
+<main>
+  <div class="banner" id="banner"></div>
+  <section id="tab-reco" data-active><div class="card"><div class="sk" style="width:40%"></div><div class="sk"></div><div class="sk" style="width:80%"></div></div></section>
+  <section id="tab-gap"></section>
+  <section id="tab-idea"><input class="search" id="q" type="search" placeholder="搜你说过的话…" autocomplete="off"><div class="small muted" style="margin:6px 2px 0">每条你说过的话一行：收到 → 系统首答 → 落成改动 → 效果。带 ~ 的落成是同时段改动、没点名引用，当疑似看。点一条展开全文。</div><div id="idea-list"></div></section>
+  <section id="tab-sig"></section>
+</main>
+<div class="toast" id="toast"></div>
+<div class="sheet" id="sheet"><h3 id="sheet-title"></h3><div id="sheet-body"></div><div class="acts" style="margin-top:14px"><button class="hold" id="sheet-close">关闭</button><button class="do" id="sheet-act" style="display:none"></button></div></div>
 <script>
 (function () {
   var LAF = 'https://v609a76lof.sealoshzh.site';
-  // VAPID 公钥（公开的那一半；私钥只在本机 ~/.config/idea_console/）。换钥匙要同步改这里。
+  var DATA_ID = 'ideadata-b03162e9a72e8fcd8339';
   var VAPID_PUBLIC = 'BCblwCPtlIicG4QNX0Ox1_d-tEIGZhTjQOGG4WEBHbTBBBS9B-NilBkLygams4Qu1H4L0-BbHK527LvfPkjHiQo';
-  var st = document.getElementById('st'), btn = document.getElementById('btn');
-  var help = document.getElementById('help'), helpTitle = document.getElementById('help-title'), helpBody = document.getElementById('help-body');
-  document.getElementById('help-close').onclick = function () { help.style.display = 'none'; };
-  function showHelp(t, html) { helpTitle.textContent = t; helpBody.innerHTML = html; help.style.display = 'block'; }
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var ls = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (_) {} }, del: function (k) { try { localStorage.removeItem(k); } catch (_) {} } };
+  var data = null, live = {}, tab = 'reco', loadedAt = 0, offline = false, hlReco = '';
 
-  // token：批准群链接带 #token=…（或 ?t=…）→ 存本地，之后静默带上。装到桌面的 web app 存储独立，拿不到就走配对码。
+  // ── 令牌：链接 #token= / ?t= → 本地；配对成功后 status 取回 ──
   var m = /[#&?]token=([^&]+)/.exec(location.hash) || /[?&]t=([^&]+)/.exec(location.search);
-  if (m) { try { localStorage.setItem('idea_push_token', decodeURIComponent(m[1])); } catch (_) {} history.replaceState(null, '', location.pathname + (location.search.indexOf('pwa=1') >= 0 ? '?pwa=1' : '')); }
-  var token = ''; try { token = localStorage.getItem('idea_push_token') || ''; } catch (_) {}
+  if (m) { ls.set('idea_push_token', decodeURIComponent(m[1])); }
+  var hm = /[#&]reco=(R\d+)/.exec(location.hash); if (hm) hlReco = hm[1];
+  if (m || hm) history.replaceState(null, '', location.pathname + (location.search.indexOf('pwa=1') >= 0 ? '?pwa=1' : ''));
+  function token() { return ls.get('idea_push_token'); }
 
+  function toast(t) { var el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 2200); }
+  function rel(ts) { if (!ts) return ''; var s = Date.now() / 1000 - ts; if (s < 60) return '刚刚'; if (s < 3600) return Math.floor(s / 60) + ' 分钟前'; if (s < 86400) return Math.floor(s / 3600) + ' 小时前'; var d = new Date(ts * 1000); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+  function hm2(ts) { var d = new Date(ts * 1000); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function dayKey(ts) { var d = new Date(ts * 1000), t = new Date(); var same = function (a, b) { return a.toDateString() === b.toDateString(); }; if (same(d, t)) return '今天'; t.setDate(t.getDate() - 1); if (same(d, t)) return '昨天'; return (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日'; }
+
+  // ── 数据 ──
+  async function load(manual) {
+    try {
+      var r = await fetch(LAF + '/get_render?id=' + DATA_ID, { cache: 'no-store' });
+      var j = await r.json();
+      if (!j.success) throw new Error(j.error || '数据读取失败');
+      data = JSON.parse(j.html); loadedAt = Date.now(); offline = false;
+      ls.set('idea_data_cache', j.html);
+      $('#banner').style.display = 'none';
+    } catch (e) {
+      var c = ls.get('idea_data_cache');
+      if (c && !data) { try { data = JSON.parse(c); } catch (_) {} }
+      offline = true;
+      var b = $('#banner'); b.style.display = 'block';
+      b.textContent = data ? ('没连上服务器，显示的是 ' + (data.generated_at || '上次') + ' 的数据。') : ('读不到数据：' + (e && e.message ? e.message : e));
+      if (manual) toast('刷新失败');
+    }
+    if (token()) await loadLive();
+    render();
+    if (manual && !offline) toast('已刷新');
+  }
+  async function loadLive() {   // 决策卡的实时状态（owner 刚点的、别处点的）
+    try {
+      var r = await fetch(LAF + '/decision-list?limit=60', { headers: { 'X-Answer-Token': token() }, cache: 'no-store' });
+      var j = await r.json(); if (!j.success) return;
+      live = {};
+      (j.pending || []).forEach(function (d) { live[d._id] = { status: 'pending' }; });
+      (j.recent || []).forEach(function (d) { live[d._id] = { status: d.status, chosen: d.chosen }; });
+    } catch (_) {}
+  }
+
+  // ── 渲染 ──
+  function render() {
+    if (!data) return;
+    var recos = data.recos || [], gaps = data.gaps || [], ideas = data.ideas || [];
+    var pend = recos.filter(function (r) { return effStatus(r).status === '待拍板'; });
+    $('#meta').textContent = (offline ? '离线 · ' : '') + '更新 ' + rel(data.generated_ts);
+    setN('#n-reco', pend.length); setN('#n-gap', gaps.filter(function (g) { return g.status === 'open'; }).length); setN('#n-idea', ideas.length);
+    try { if ('setAppBadge' in navigator) { pend.length ? navigator.setAppBadge(pend.length) : navigator.clearAppBadge(); } } catch (_) {}
+    renderReco(recos, pend); renderGap(gaps); renderIdea(ideas); renderSig(data.signals || {});
+    if (hlReco) { showTab('reco'); var el = document.getElementById('reco-' + hlReco); if (el) { el.classList.add('hl'); el.scrollIntoView({ block: 'center' }); } hlReco = ''; }
+  }
+  function setN(sel, n) { var el = $(sel); el.textContent = n; el.classList.toggle('zero', !n); }
+  function effStatus(r) {   // 数据包状态 + 卡的实时状态 + 本地刚点的，取最新
+    var local = ls.get('idea_decided_' + r.id);
+    var lv = r.decision_id && live[r.decision_id];
+    if (r.status !== '待拍板') return { status: r.status, by: r.by, pendingSync: false };
+    if (lv && lv.status === 'answered' && lv.chosen) return { status: lv.chosen, by: '控制台', pendingSync: true };
+    if (lv && lv.status === 'expired') return { status: '放着', by: '3 天未表态', pendingSync: true };
+    if (local) return { status: local, by: '这里', pendingSync: true };
+    return { status: '待拍板', pendingSync: false };
+  }
+  function recoCard(r, full) {
+    var st = effStatus(r), id = esc(r.id);
+    var h = '<div class="card" id="reco-' + id + '"><div class="chips"><span class="b k' + esc(r.kind) + '">' + esc(r.kind) + '</span><span class="b">' + id + '</span>'
+      + (st.status !== '待拍板' ? '<span class="b s' + esc(st.status) + '">' + esc(st.status) + '</span>' : '') + '<span>' + rel(r.ts) + '</span></div>'
+      + '<div class="t">' + esc(r.title) + '</div>'
+      + '<div class="kv"><div class="k">为什么</div><div>' + esc(r.why) + '</div>'
+      + (full ? '<div class="k">怎么做</div><div>' + esc(r.action) + '</div><div class="k">代价</div><div>' + esc(r.cost || '未估') + '</div>'
+        + (r.gaps && r.gaps.length ? '<div class="k">来自</div><div class="small muted">缝隙 ' + esc(r.gaps.join('、')) + '</div>' : '') : '') + '</div>'
+      + (!full ? '<button class="more" data-more="' + id + '">怎么做、代价 ›</button>' : '');
+    if (st.status === '待拍板') {
+      h += '<div class="acts" data-rid="' + id + '" data-did="' + esc(r.decision_id || '') + '"><button class="do" data-c="做">做</button><button class="hold" data-c="放着">放着</button><button class="no" data-c="不做">不做</button></div>';
+    } else {
+      h += '<div class="decided">拍板：' + esc(st.by || r.by || '—') + (r.decided_ts ? ' · ' + rel(r.decided_ts) : '') + (st.pendingSync ? ' · 系统接手中' : '')
+        + (r.done_note ? '<br>落成：' + esc(r.done_note) : '') + (r.status === '已落成' ? '<br>效果：' + esc(r.effect || '未量') : '') + '</div>';
+    }
+    return h + '</div>';
+  }
+  var openMore = {};
+  function renderReco(recos, pend) {
+    var done = recos.filter(function (r) { return effStatus(r).status !== '待拍板'; });
+    var h = '';
+    if (!pend.length) h += '<div class="empty">今天没有待你拍板的推荐。<br><span class="small">没有出处的不提。每天 20:30 后更新。</span></div>';
+    pend.forEach(function (r) { h += recoCard(r, !!openMore[r.id]); });
+    if (done.length) { h += '<div class="day" style="position:static">近 30 天已拍板 · ' + done.length + '</div>'; done.forEach(function (r) { h += recoCard(r, !!openMore[r.id]); }); }
+    $('#tab-reco').innerHTML = h;
+  }
+  function renderGap(gaps) {
+    var h = '';
+    if (!gaps.length) h = '<div class="empty">空。被「只进必要方向」压下的另见、探针黄灯、未验假设会进这里。</div>';
+    gaps.forEach(function (g) {
+      h += '<div class="card"><div class="chips"><span class="b">' + esc(g.id) + '</span><span class="b">' + esc(g.status) + '</span><span>' + rel(g.ts) + (g.source ? ' · ' + esc(g.source) : '') + '</span></div>'
+        + '<div class="t" style="font-size:16px">' + esc(g.text) + '</div><div class="small muted">出处：' + esc(g.evidence) + '</div></div>';
+    });
+    $('#tab-gap').innerHTML = h;
+  }
+  var q = '';
+  function renderIdea(ideas) {
+    var list = ideas.filter(function (i) { return !q || (i.idea + ' ' + (i.reply || '') + ' ' + i.chat).toLowerCase().indexOf(q) >= 0; });
+    var h = '', day = '';
+    list.forEach(function (i) {
+      var dk = dayKey(i.ts); if (dk !== day) { day = dk; h += '<div class="day">' + esc(dk) + '</div>'; }
+      var landed = (i.landed && i.landed.length) ? i.landed.join('、') : ((i.landed_maybe && i.landed_maybe.length) ? i.landed_maybe.map(function (x) { return '~' + x; }).join('、') : '—');
+      h += '<div class="idea" data-toggle><div class="chips"><span>' + hm2(i.ts) + '</span><span class="b">' + esc(i.lane) + '</span><span>' + esc(i.chat) + '</span>' + (i.status === 'pending' || i.status === 'processing' ? '<span class="b s待拍板">处理中</span>' : '') + '</div>'
+        + '<div class="what clamp c3">' + esc(i.idea) + '</div>'
+        + '<div class="row"><div class="k">首答</div><div class="v clamp c2">' + (i.reply ? esc(i.reply) : '<span class="muted">没找到首答</span>') + '</div></div>'
+        + '<div class="row small"><div class="k">落成</div><div class="v">' + esc(landed) + '</div></div>'
+        + '<div class="row small"><div class="k">效果</div><div class="v">' + esc(i.effect || '未量') + '</div></div></div>';
+    });
+    if (!list.length) h += '<div class="empty">没有匹配的。</div>';
+    $('#idea-list').innerHTML = h;
+  }
+  var qi = $('#q'), qt = null;
+  qi.oninput = function () { clearTimeout(qt); qt = setTimeout(function () { q = qi.value.trim().toLowerCase(); if (data) renderIdea(data.ideas || []); }, 120); };
+  function renderSig(s) {
+    var pr = s.probe || {}, rg = s.regression || {}, dg = s.digest_7d || {}, mc = s.memory_churn_7d, id7 = s.ideas_7d || {}, bl = s.inbox_backlog || {};
+    var kv = function (k, v) { return '<div class="k">' + esc(k) + '</div><div>' + v + '</div>'; };
+    var h = '<div class="card sig"><div class="kv">'
+      + kv('回路探针', esc(pr.error || (pr.bad && pr.bad.length ? pr.bad.length + ' 条非 OK：' + pr.bad.map(function (b) { return b.loop + '=' + b.status; }).join('；') : '全 OK')))
+      + kv('记忆索引', pr.memory_md_headroom != null ? '余 ' + esc(pr.memory_md_headroom) + ' 字节' : '—')
+      + kv('回归账本', esc(rg.error || (rg.ts + ' 跑 ' + rg.files + ' 份，红 ' + (rg.red || []).length + (rg.red && rg.red.length ? '：' + rg.red.slice(0, 6).join('、') : ''))))
+      + kv('7 天自主修复', dg.total != null ? dg.total + ' 条，日均 ' + dg.per_day + '；验证 ' + esc(JSON.stringify(dg.by_verify || {})) : '—')
+      + kv('反复改的记忆', Array.isArray(mc) ? (mc.length ? mc.map(function (x) { return esc(x.file) + '×' + x.edits; }).join('、') : '无') : esc((mc || {}).error || '—'))
+      + kv('7 天你的想法', id7.total != null ? id7.total + ' 条，没找到首答 ' + id7.unanswered + '，对不上改动 ' + id7.not_landed : '—')
+      + kv('队列积压', esc(JSON.stringify(bl)))
+      + '</div></div><div class="small muted" style="padding:4px 6px">数据源：收件箱、修复汇总队列、回路探针、回归账本、记忆仓库提交记录。拍板记录同时进 owner 决策语料。</div>';
+    $('#tab-sig').innerHTML = h;
+  }
+
+  // ── 交互 ──
+  function showTab(t) { tab = t; document.querySelectorAll('nav [role=tab]').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'); }); document.querySelectorAll('main section').forEach(function (s) { if (s.id === 'tab-' + t) s.setAttribute('data-active', ''); else s.removeAttribute('data-active'); }); ls.set('idea_tab', t); window.scrollTo(0, 0); }
+  document.querySelector('nav').addEventListener('click', function (e) { var b = e.target.closest('[role=tab]'); if (b) showTab(b.dataset.tab); });
+  document.querySelector('main').addEventListener('click', function (e) {
+    var more = e.target.closest('[data-more]'); if (more) { openMore[more.dataset.more] = true; render(); return; }
+    var act = e.target.closest('.acts[data-rid] button'); if (act) { return decideTap(act); }
+    var it = e.target.closest('[data-toggle]'); if (it && !e.target.closest('input')) { it.classList.toggle('open'); }
+  });
+  var confirmTimer = null;
+  function decideTap(btn) {   // 两步：第一下变「确认」，3 秒内再点才提交——手机上防误触，又不弹对话框
+    var wrap = btn.closest('.acts'), rid = wrap.dataset.rid, did = wrap.dataset.did, choice = btn.dataset.c;
+    if (!btn.classList.contains('confirm')) {
+      wrap.querySelectorAll('button').forEach(function (b) { b.classList.remove('confirm'); b.textContent = b.dataset.c; });
+      btn.classList.add('confirm'); btn.textContent = '确认' + choice;
+      clearTimeout(confirmTimer); confirmTimer = setTimeout(function () { btn.classList.remove('confirm'); btn.textContent = choice; }, 3000);
+      return;
+    }
+    clearTimeout(confirmTimer);
+    if (!token()) { openSheet('还不能在这里拍板', '<p>这台设备还没拿到答复令牌。开启推送并完成配对后就能直接点；或者在微信 @龙虾owner 回「' + esc(choice) + ' ' + esc(rid) + '」。</p>'); return; }
+    if (!did) { openSheet('这条没有决策卡', '<p>在微信 @龙虾owner 回「' + esc(choice) + ' ' + esc(rid) + '」即可。</p>'); return; }
+    wrap.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    fetch(LAF + '/decision-answer', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Answer-Token': token() }, body: JSON.stringify({ decision_id: did, chosen: choice }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.error && !/^already_/.test(j.error)) throw new Error(j.error);
+        if (j.error) { toast('这条已经拍过：' + (j.chosen || '')); }
+        else { ls.set('idea_decided_' + rid, choice); toast(rid + ' ' + choice + ' · 已记录，系统接手'); }
+        return loadLive().then(render);
+      })
+      .catch(function (e) { toast('没提交成功：' + (e && e.message ? e.message : e)); wrap.querySelectorAll('button').forEach(function (b) { b.disabled = false; b.classList.remove('confirm'); b.textContent = b.dataset.c; }); });
+  }
+  $('#refresh').onclick = function () { load(true); };
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - loadedAt > 60000) load(false); });
+  setInterval(function () { if (!document.hidden && Date.now() - loadedAt > 120000) load(false); }, 30000);
+  // 下拉刷新
+  var ptr = $('#ptr'), y0 = null;
+  document.addEventListener('touchstart', function (e) { y0 = (window.scrollY <= 0) ? e.touches[0].clientY : null; }, { passive: true });
+  document.addEventListener('touchmove', function (e) { if (y0 == null) return; var dy = e.touches[0].clientY - y0; ptr.style.height = (dy > 10 ? Math.min(dy / 2, 48) : 0) + 'px'; ptr.textContent = dy > 90 ? '松开刷新' : '下拉刷新'; }, { passive: true });
+  document.addEventListener('touchend', function () { var h = parseInt(ptr.style.height || '0', 10); ptr.style.height = '0'; if (h >= 44) load(true); y0 = null; });
+
+  // ── 底部面板 ──
+  function openSheet(title, html, actLabel, actFn) { $('#sheet-title').textContent = title; $('#sheet-body').innerHTML = html; var a = $('#sheet-act'); if (actLabel) { a.style.display = ''; a.textContent = actLabel; a.onclick = actFn; } else { a.style.display = 'none'; } $('#sheet').classList.add('show'); }
+  $('#sheet-close').onclick = function () { $('#sheet').classList.remove('show'); };
+
+  // ── 推送 ──
   var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   var supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-
   function b64ToU8(s) { var p = '='.repeat((4 - s.length % 4) % 4); var b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); var a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
-
-  function setState(text, buttonLabel) {
-    st.textContent = text;
-    if (buttonLabel) { btn.textContent = buttonLabel; btn.style.display = ''; } else { btn.style.display = 'none'; }
-  }
-
-  function installHelp() {
-    showHelp('先装到桌面，再开推送', isIOS
-      ? '<ol><li>点 Safari 底部的「分享」按钮</li><li>选「添加到主屏幕」</li><li>从桌面图标打开想法台，再点「开启推送」</li></ol><div style="color:#777;font-size:13px">iPhone 要 iOS 16.4 以上，且必须从桌面图标打开才有通知权限。</div>'
-      : '<ol><li>浏览器地址栏右侧「安装」图标，或菜单里「安装想法台」</li><li>装好后点「开启推送」</li></ol>');
-  }
-
-  async function subscribe() {
-    btn.disabled = true;
-    try {
-      var reg = await navigator.serviceWorker.register('sw.js');
-      await navigator.serviceWorker.ready;
-      var perm = await Notification.requestPermission();
-      if (perm !== 'granted') { setState('通知权限没给。去系统设置里允许「想法台」通知，再回来点一次。', '开启推送'); return; }
-      var sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
-      var headers = { 'Content-Type': 'application/json' };
-      if (token) headers['X-Answer-Token'] = token;
-      var r = await fetch(LAF + '/push-subscribe', { method: 'POST', headers: headers,
-        body: JSON.stringify({ subscription: sub.toJSON(), ua: navigator.userAgent, label: 'idea' }) });
-      var j = await r.json();
-      if (j.error) { setState('登记失败：' + j.error, '重试'); return; }
-      if (j.status === 'active') {
-        try { localStorage.setItem('idea_push_state', 'active'); } catch (_) {}
-        setState('推送已开启。每天的推荐会弹到通知栏。', '关闭推送');
-      } else {
-        try { localStorage.setItem('idea_push_state', 'pending:' + j.code); } catch (_) {}
-        setState('差一步：把配对码发给 @龙虾owner', '看配对码');
-        showHelp('配对码', '<div class="code">' + j.code + '</div><div>在微信里 @龙虾owner 发一句：<b>推送码 ' + j.code + '</b></div><div style="color:#777;font-size:13px;margin-top:6px">收到后这台设备就开始收推送，第一条是测试通知。</div>');
-      }
-    } catch (e) {
-      setState('开启失败：' + (e && e.message ? e.message : e), '重试');
-    } finally { btn.disabled = false; }
-  }
-
-  async function unsubscribe() {
-    btn.disabled = true;
-    try {
-      var reg = await navigator.serviceWorker.getRegistration('sw.js');
-      var sub = reg && await reg.pushManager.getSubscription();
-      if (sub) {
-        await fetch(LAF + '/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'unsubscribe', subscription: sub.toJSON() }) });
-        await sub.unsubscribe();
-      }
-      try { localStorage.removeItem('idea_push_state'); } catch (_) {}
-      setState('推送已关闭。', '开启推送');
-    } catch (e) { setState('关闭失败：' + (e && e.message ? e.message : e), '关闭推送'); }
-    finally { btn.disabled = false; }
-  }
-
-  async function init() {
-    if (!supported) {
-      if (isIOS && !standalone) { setState('要收通知，先装到桌面。', '怎么装'); btn.onclick = installHelp; }
-      else { setState('这个浏览器不支持网页通知。'); }
-      return;
-    }
-    var saved = ''; try { saved = localStorage.getItem('idea_push_state') || ''; } catch (_) {}
+  function pushUI(state, label) { $('#pushdot').className = 'dot ' + (state === 'active' ? 'on' : state === 'pending' ? 'pend' : ''); $('#pushlbl').textContent = label; }
+  var pushState = 'off';
+  async function pushInit() {
+    if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('sw.js'); } catch (_) {} }
+    if (!supported) { pushUI('off', isIOS && !standalone ? '装到桌面' : '推送'); return; }
     var reg = await navigator.serviceWorker.getRegistration('sw.js');
     var sub = reg && await reg.pushManager.getSubscription();
-    if (sub && saved === 'active' && Notification.permission === 'granted') {
-      setState('推送已开启。', '关闭推送'); btn.onclick = unsubscribe; return;
+    var saved = ls.get('idea_push_state');
+    if (sub && Notification.permission === 'granted') {
+      if (saved.indexOf('pending:') === 0) { pushState = 'pending'; pushUI('pending', '待配对'); pollStatus(sub); return; }
+      pushState = 'active'; pushUI('active', '推送开'); if (!token()) pollStatus(sub); return;
     }
-    if (sub && saved.indexOf('pending:') === 0) {
-      var code = saved.slice(8);
-      setState('差一步：把配对码发给 @龙虾owner', '看配对码');
-      btn.onclick = function () { showHelp('配对码', '<div class="code">' + code + '</div><div>在微信里 @龙虾owner 发一句：<b>推送码 ' + code + '</b></div>'); };
+    pushState = 'off'; pushUI('off', '开推送');
+  }
+  async function pollStatus(sub) {   // 配对后把令牌取回来（iOS 桌面 app 拿不到链接里的）
+    try {
+      var j = await (await fetch(LAF + '/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', endpoint: sub.endpoint, auth: (sub.toJSON().keys || {}).auth }) })).json();
+      if (j.status === 'active') { ls.set('idea_push_state', 'active'); pushState = 'active'; pushUI('active', '推送开'); if (j.token) { ls.set('idea_push_token', j.token); await loadLive(); render(); } }
+      else if (j.status === 'pending') { setTimeout(function () { pollStatus(sub); }, 8000); }
+    } catch (_) { setTimeout(function () { pollStatus(sub); }, 15000); }
+  }
+  async function subscribe() {
+    try {
+      var reg = await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready;
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') { openSheet('通知权限没给', '<p>去系统设置里允许「想法台」通知，再回来点一次。</p>'); return; }
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
+      var headers = { 'Content-Type': 'application/json' }; if (token()) headers['X-Answer-Token'] = token();
+      var j = await (await fetch(LAF + '/push-subscribe', { method: 'POST', headers: headers, body: JSON.stringify({ subscription: sub.toJSON(), ua: navigator.userAgent, label: 'idea' }) })).json();
+      if (j.error) throw new Error(j.error);
+      if (j.status === 'active') { ls.set('idea_push_state', 'active'); if (j.token) ls.set('idea_push_token', j.token); pushState = 'active'; pushUI('active', '推送开'); $('#sheet').classList.remove('show'); toast('推送已开启'); await loadLive(); render(); }
+      else { ls.set('idea_push_state', 'pending:' + j.code); pushState = 'pending'; pushUI('pending', '待配对'); openSheet('差一步：配对', '<div class="code">' + esc(j.code) + '</div><p>在微信里 @龙虾owner 发一句：<b>推送码 ' + esc(j.code) + '</b></p><p class="small muted">批了之后这台设备开始收推送，第一条是测试通知；同时这里就能直接点 做 / 不做 / 放着。</p>'); pollStatus(sub); }
+    } catch (e) { openSheet('开启失败', '<p>' + esc(e && e.message ? e.message : e) + '</p>'); }
+  }
+  async function unsubscribe() {
+    try {
+      var reg = await navigator.serviceWorker.getRegistration('sw.js'); var sub = reg && await reg.pushManager.getSubscription();
+      if (sub) { await fetch(LAF + '/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'unsubscribe', subscription: sub.toJSON() }) }); await sub.unsubscribe(); }
+      ls.del('idea_push_state'); pushState = 'off'; pushUI('off', '开推送'); $('#sheet').classList.remove('show'); toast('推送已关闭');
+    } catch (e) { toast('关闭失败：' + (e && e.message ? e.message : e)); }
+  }
+  $('#pushbtn').onclick = function () {
+    if (!supported) {
+      if (isIOS && !standalone) openSheet('先装到桌面，再开推送', '<ol><li>点 Safari 底部的「分享」按钮</li><li>选「添加到主屏幕」</li><li>从桌面图标打开想法台，再点右上「开推送」</li></ol><p class="small muted">iPhone 要 iOS 16.4 以上，且必须从桌面图标打开才有通知权限。</p>');
+      else openSheet('这个浏览器不支持网页通知', '<p>换 Chrome / Safari / Edge 打开。</p>');
       return;
     }
-    if (isIOS && !standalone) { setState('要收通知，先装到桌面。', '怎么装'); btn.onclick = installHelp; return; }
-    setState(Notification.permission === 'denied' ? '通知被拒绝过。系统设置里允许「想法台」通知后再点。' : '推荐可以直接弹到通知栏。', '开启推送');
-    btn.onclick = subscribe;
-  }
-  init();
+    if (pushState === 'active') openSheet('推送已开启', '<p>每天的推荐会弹到通知栏，点开直达那条。</p>' + (token() ? '<p class="small muted">这台设备可以直接在卡上拍板。</p>' : '<p class="small muted">令牌还在取回中，取回后卡上就能直接拍板。</p>'), '关闭推送', unsubscribe);
+    else if (pushState === 'pending') { var code = ls.get('idea_push_state').slice(8); openSheet('配对码', '<div class="code">' + esc(code) + '</div><p>在微信里 @龙虾owner 发一句：<b>推送码 ' + esc(code) + '</b></p>'); }
+    else openSheet('开启推送', '<p>每天 20:30 后的推荐直接弹到通知栏，点开直达那条，卡上就能拍板。</p>', '开启', subscribe);
+  };
+
+  function measure() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
+  window.addEventListener('resize', measure); measure();
+  // ── 启动 ──
+  var savedTab = ls.get('idea_tab'); if (savedTab && !hlReco) showTab(savedTab);
+  load(false); pushInit();
 })();
 </script>
 </body>
