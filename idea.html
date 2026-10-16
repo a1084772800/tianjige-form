@@ -338,6 +338,10 @@ section{display:none}section[data-active]{display:block}
     else openSheet('开启推送', '<p>每天 20:30 后的推荐直接弹到通知栏，点开直达那条，卡上就能拍板。</p>', '开启', subscribe);
   };
 
+  window.addEventListener('hashchange', function () {   // app 已开着时通知点进来只变 hash，不重载：这里接住深链
+    var h = /[#&]reco=(R\d+)/.exec(location.hash); if (!h) return;
+    hlReco = h[1]; history.replaceState(null, '', location.pathname + location.search); if (data) render();
+  });
   function measure() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
   window.addEventListener('resize', measure); measure();
   // ── 启动 ──
