@@ -8,7 +8,8 @@
 //   游客 / 注册＝发奖流水 points_logs add「新设备体验奖励」/「新用户奖励」（users 表没有来源字段）；
 //   AI＝points_logs deduct；近 7 天＝所问日往前 7 个自然日（含当日）有 deduct 的人；
 //   积分见底＝用过天机阁 AI、余额 <5、从没有过已付订单的人（当前快照，不随 date 回溯）；
-//   付费＝orders status=paid，按真付款时刻落日。
+//   付费＝orders status=paid，按真付款时刻落日；按商品分（byProduct，1111）看 orders.product，缺省按 points（同 pay.ts / notify.ts），
+//   三值外的归 other，各商品笔数之和＝n。
 // ⚠️ 付款时间刻度：notify 回调把支付平台回传的北京时间字符串当 UTC 存进 paid_at（1028 实测 59/59 笔 paid_at−created_at＝8 小时＋12 秒～25 分），
 //   所以真付款时刻＝paid_at−8 小时。若某笔已付订单 paid_at−created_at 不到 8 小时−2 分＝刻度变了（回调被修过），付费项报错不出数，等人复核口径。
 // 部署（laf CLI）：在 `laf app init v609a76lof` 过的目录里，本文件放 functions/tj_daily_stats.ts，
@@ -22,6 +23,7 @@ const D = 86400000
 const SHIFT = 8 * 3600000
 const SRC = 'tianjige'
 const LOW = 5
+const PRODUCTS = ['points', 'report2027', 'member_month']
 const isTest = (u: any) => typeof u === 'string' && u.startsWith('test_')
 const notTest = { $not: /^test_/ }
 
@@ -72,7 +74,7 @@ export default async function (ctx: FunctionContext) {
 
   await run('paid', async () => {
     const rows = await O.find({ status: 'paid', app_source: SRC, paid_at: { $gte: new Date(s.getTime() + SHIFT), $lt: new Date(e.getTime() + SHIFT) } })
-      .project({ _id: 0, user_id: 1, amount: 1, paid_at: 1, created_at: 1 }).toArray()
+      .project({ _id: 0, user_id: 1, amount: 1, paid_at: 1, created_at: 1, product: 1 }).toArray()
     const near = await O.find({ status: 'paid', created_at: { $gte: new Date(s.getTime() - D), $lt: new Date(e.getTime() + D) } })
       .project({ _id: 0, paid_at: 1, created_at: 1 }).toArray()
     for (const r of [...rows, ...near]) {
@@ -81,12 +83,20 @@ export default async function (ctx: FunctionContext) {
     }
     const real = rows.filter((r: any) => !isTest(r.user_id))
     let amount = 0
+    const byProduct: any = {}
+    for (const p of PRODUCTS) byProduct[p] = { n: 0, amount: 0 }
     for (const r of real) {
       const a = Number(r.amount)
       if (!isFinite(a) || a < 0) throw new Error('有已付订单金额不是数')
       amount += a
+      const p = String(r.product || 'points')
+      const k = PRODUCTS.includes(p) ? p : 'other'
+      if (!byProduct[k]) byProduct[k] = { n: 0, amount: 0 }
+      byProduct[k].n++
+      byProduct[k].amount += a
     }
-    return { n: real.length, amount: Math.round(amount * 100) / 100, test: rows.length - real.length }
+    for (const k of Object.keys(byProduct)) byProduct[k].amount = Math.round(byProduct[k].amount * 100) / 100
+    return { n: real.length, amount: Math.round(amount * 100) / 100, test: rows.length - real.length, byProduct }
   })
 
   await run('active7', async () => {
