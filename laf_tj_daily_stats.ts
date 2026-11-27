@@ -3,6 +3,8 @@
 // 鉴权：请求头 x-stats-token；这里只存它的 sha256，令牌本体只在本机 ~/.workspace/runtime/secrets/tianjige_stats_token。
 // 只读：只用 find / countDocuments / distinct / aggregate($match/$group，无 $out/$merge)；只回聚合数，不回任何用户号、手机号、昵称、生辰。
 // 入参：POST {date:'YYYY-MM-DD'}（北京时间日）。每项单独 try：某项失败回 {err}，别项照出——调用方据此写「未取到」，绝不当 0。
+//   可选 from:'YYYY-MM-DD'（≤ date，最多 62 天）：多回一项 payersRange＝from 到 date 的付费笔数、金额、去重人数、其中头一回付费的人数
+//   （1127 天机阁 2027 小考报结果要「几人」：日报按天出笔数，一人跨天付几笔分不出）。不给 from 不算这项，日报不受影响。
 // 口径（照 1028 审查 q_growth.py / q_growth2.py）：
 //   只算 app_source='tianjige'；user_id 以 test_ 开头的测试号剔除（剔除数另回 test 字段）；
 //   游客 / 注册＝发奖流水 points_logs add「新设备体验奖励」/「新用户奖励」（users 表没有来源字段）；
@@ -97,6 +99,21 @@ export default async function (ctx: FunctionContext) {
     }
     for (const k of Object.keys(byProduct)) byProduct[k].amount = Math.round(byProduct[k].amount * 100) / 100
     return { n: real.length, amount: Math.round(amount * 100) / 100, test: rows.length - real.length, byProduct }
+  })
+
+  const from = String((ctx.body || {}).from || '')
+  if (from) await run('payersRange', async () => {
+    const fs = new Date(from + 'T00:00:00+08:00')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || isNaN(fs.getTime()) || fs > s || e.getTime() - fs.getTime() > 62 * D) throw new Error('bad_from')
+    const rows = await O.find({ status: 'paid', app_source: SRC, paid_at: { $gte: new Date(fs.getTime() + SHIFT), $lt: new Date(e.getTime() + SHIFT) } })
+      .project({ _id: 0, user_id: 1, amount: 1 }).toArray()
+    const real = rows.filter((r: any) => !isTest(r.user_id))
+    const ids = [...new Set(real.map((r: any) => String(r.user_id)))]
+    const before = new Set((await O.distinct('user_id', { status: 'paid', app_source: SRC, paid_at: { $lt: new Date(fs.getTime() + SHIFT) } })).map(String))
+    const amount = real.reduce((a: number, r: any) => a + Number(r.amount), 0)
+    if (!isFinite(amount)) throw new Error('有已付订单金额不是数')
+    return { from, to: date, n: real.length, amount: Math.round(amount * 100) / 100, test: rows.length - real.length,
+             payers: ids.length, firstTime: ids.filter((u) => !before.has(u)).length }
   })
 
   await run('active7', async () => {
